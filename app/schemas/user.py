@@ -1,0 +1,30 @@
+"""
+    @project: aihub
+    @Author: dongrunhua
+    @file: user
+    @date: 2025/7/8 17:56
+    @desc:
+"""
+
+from typing import Optional
+from pydantic import BaseModel, Field
+
+
+class UserBase(BaseModel):
+    """用户基础模型"""
+    email: str = Field(pattern=r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$",  examples=["user@example.com"],)
+    full_name: Optional[str] = Field(examples=["张三"])
+
+
+class UserCreate(UserBase):
+    """用户创建模型（注册用）"""
+    password: str = Field(min_length=6, examples=["strongpassword123"])
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "user@example.com",
+                "full_name": "张三",
+                "password": "strongpassword123"
+            }
+        }
