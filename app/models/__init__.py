@@ -7,7 +7,6 @@
 """
 from .user import User
 from .session import Session
-from .question import Question
-from .answer import Answer
+from .conversation import AIConversation
 
-__all__ = ["User", "Session", "Question", "Answer"]
+__all__ = ["User", "Session", "AIConversation"]

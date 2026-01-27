@@ -8,13 +8,11 @@
 from .user import UserBase, UserCreate, UserUpdate, UserResponse
 from .session import SessionBase, SessionCreate, SessionResponse
 from .token import TokenResponse, TokenData
-from .question import QuestionBase, QuestionCreate, QuestionResponse
-from .answer import AnswerBase, AnswerCreate, AnswerResponse
+from .conversation import Message, ConversationCreate, MessageCreate, ConversationResponse, ConversationDetailResponse
 
 __all__ = [
     "UserBase", "UserCreate", "UserUpdate", "UserResponse",
     "SessionBase", "SessionCreate", "SessionResponse",
     "TokenResponse", "TokenData",
-    "QuestionBase", "QuestionCreate", "QuestionResponse",
-    "AnswerBase", "AnswerCreate", "AnswerResponse"
+    "Message", "ConversationCreate", "MessageCreate", "ConversationResponse", "ConversationDetailResponse"
 ]
