@@ -20,12 +20,12 @@ from app.services.auth_service import get_current_user
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register")
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    return Result.success(create_user(db=db, user=user))
+    return Result.success(create_user(db=db, user=user)).to_dict()
 
 
-@router.put("/{user_id}", response_model=UserResponse)
+@router.put("/{user_id}")
 def update_user_endpoint(
     user_id: str,
     user_update: UserUpdate,
@@ -35,20 +35,20 @@ def update_user_endpoint(
     if current_user.id != user_id and not current_user.is_superuser:
         raise AppApiException(403, "没有权限修改其他用户信息")
 
-    return Result.success(update_user(db=db, user_id=user_id, user_update=user_update))
+    return Result.success(update_user(db=db, user_id=user_id, user_update=user_update)).to_dict()
 
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}")
 def read_user(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_user = get_user(db, user_id=user_id)
     if db_user is None:
         raise AppApiException(404, message="用户不存在")
-    return Result.success(db_user)
+    return Result.success(db_user).to_dict()
 
 
-@router.get("/", response_model=List[UserResponse])
+@router.get("/")
 def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     users = get_users(db, skip=skip, limit=limit)
-    return Result.success(users)
+    return Result.success(users).to_dict()
 
 

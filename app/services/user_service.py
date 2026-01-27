@@ -24,6 +24,10 @@ def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
 
+def get_user_by_username(db: Session, username: str):
+    return db.query(User).filter(User.username == username).first()
+
+
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).offset(skip).limit(limit).all()
 
@@ -31,11 +35,15 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 def create_user(db: Session, user: UserCreate):
     if db.query(User).filter(User.email == user.email).first():
         raise AppApiException(500, "邮箱已被注册")
+    
+    if db.query(User).filter(User.username == user.username).first():
+        raise AppApiException(500, "用户名已被注册")
 
     hashed_password = get_password_hash(user.password)
     db_user = User(
         id=str(uuid.uuid1()),
         email=user.email,
+        username=user.username,
         hashed_password=hashed_password,
         full_name=user.full_name
     )

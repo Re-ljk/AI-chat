@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 class UserBase(BaseModel):
     """用户基础模型"""
     email: str = Field(pattern=r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$",  examples=["user@example.com"],)
+    username: str = Field(min_length=3, max_length=50, examples=["jiangkuanli"])
     full_name: Optional[str] = Field(examples=["张三"])
 
 
@@ -24,6 +25,7 @@ class UserCreate(UserBase):
         json_schema_extra = {
             "example": {
                 "email": "user@example.com",
+                "username": "jiangkuanli",
                 "full_name": "张三",
                 "password": "strongpassword123"
             }
@@ -48,6 +50,7 @@ class UserResponse(BaseModel):
     """用户响应模型"""
     id: str
     email: str
+    username: str
     full_name: Optional[str]
     is_active: bool
     is_superuser: bool

@@ -16,7 +16,7 @@ from app.common.core.security import verify_password
 from config import settings
 from app.database.base import get_db
 from app.schemas.token import TokenData
-from app.services.user_service import get_user_by_email
+from app.services.user_service import get_user_by_email, get_user_by_username
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
@@ -25,11 +25,11 @@ def authenticate_user(db: Session, username: str, password: str):
     """
     验证用户凭据
     :param db: 数据库会话
-    :param username: 用户名/邮箱
+    :param username: 用户名
     :param password: 明文密码
     :return: 用户对象或False
     """
-    user = get_user_by_email(db, email=username)  # 假设username是email
+    user = get_user_by_username(db, username=username)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
