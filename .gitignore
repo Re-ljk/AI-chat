@@ -1,0 +1,37 @@
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Log files
+*.log
+app.log
+
+# Testing
+.pytest_cache/
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build files
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+tmp/
+temp/
