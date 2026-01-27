@@ -7,10 +7,10 @@
 """
 from .user import UserBase, UserCreate, UserUpdate, UserResponse
 from .session import SessionBase, SessionCreate, SessionResponse
-from .token import Token, TokenData
+from .token import TokenResponse, TokenData
 
 __all__ = [
     "UserBase", "UserCreate", "UserUpdate", "UserResponse",
     "SessionBase", "SessionCreate", "SessionResponse",
-    "Token", "TokenData"
+    "TokenResponse", "TokenData"
 ]

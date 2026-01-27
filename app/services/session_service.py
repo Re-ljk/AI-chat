@@ -37,7 +37,7 @@ def get_sessions(db: Session, user_id: str, skip: int = 0, limit: int = 100):
     return db.query(Session).filter(
         Session.user_id == user_id,
         Session.is_active == True
-    ).offset(skip).limit(limit).order_by(Session.created_at.desc()).all()
+    ).order_by(Session.created_at.desc()).offset(skip).limit(limit).all()
 
 
 def create_session(db: Session, user_id: str, session_create: SessionCreate):
