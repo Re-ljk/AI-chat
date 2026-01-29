@@ -7,12 +7,13 @@
 """
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import json
 
 from app.database.base import get_db
-from app.schemas.conversation import ConversationCreate, ConversationResponse, ConversationDetailResponse, MessageCreate, StreamRequest
-from app.services.conversation_service import get_conversation, get_conversations, create_conversation, delete_conversation, add_message, get_messages, stream_chat
+from app.schemas.conversation import ConversationCreate, ConversationResponse, ConversationDetailResponse, MessageCreate, StreamMessageCreate
+from app.services.conversation_service import get_conversation, get_conversations, create_conversation, delete_conversation, add_message, get_messages, add_stream_message, save_stream_message, get_red_conversations
 from app.common.core.result import Result, AppApiException
 from app.models.user import User
 from app.services.auth_service import get_current_user
@@ -104,26 +105,50 @@ def get_messages_endpoint(
     return Result.success(messages).to_dict()
 
 
-@router.post("/stream")
-async def stream_chat_endpoint(
-    stream_request: StreamRequest,
+@router.post("/{conversation_id}/stream")
+async def stream_message_endpoint(
+    conversation_id: str,
+    message_create: StreamMessageCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     流式问答接口
     """
-    from fastapi.responses import StreamingResponse
-    
-    conversation = stream_chat(db=db, session_id=stream_request.session_id, user_id=current_user.id, stream_request=stream_request)
-    
-    async def generate():
-        yield f"data: {json.dumps({'type': 'start', 'conversation': conversation.to_dict()}, ensure_ascii=False)}\n\n"
+    if message_create.stream:
+        async def generate():
+            yield json.dumps({
+                "type": "message",
+                "data": add_stream_message(db=db, conversation_id=conversation_id, user_id=current_user.id, message_create=message_create.dict())
+            }).encode('utf-8') + b'\n\n'
         
-        yield f"data: {json.dumps({'type': 'message', 'message': {'role': 'user', 'content': stream_request.content}}, ensure_ascii=False)}\n\n"
-        
-        yield f"data: {json.dumps({'type': 'message', 'message': {'role': 'assistant', 'content': '这是一个模拟的AI回复'}}, ensure_ascii=False)}\n\n"
-        
-        yield f"data: {json.dumps({'type': 'end'}, ensure_ascii=False)}\n\n"
-    
-    return StreamingResponse(generate(), media_type="text/event-stream")
+        return StreamingResponse(generate(), media_type="text/event-stream")
+    else:
+        return Result.success(add_message(db=db, conversation_id=conversation_id, user_id=current_user.id, message_create=message_create)).to_dict()
+
+
+@router.post("/{conversation_id}/stream/save")
+def save_stream_message_endpoint(
+    conversation_id: str,
+    message: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    保存流式消息到数据库
+    """
+    return Result.success(save_stream_message(db=db, conversation_id=conversation_id, user_id=current_user.id, message=message)).to_dict()
+
+
+@router.get("/red")
+def get_red_conversations_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取红对话列表（多轮会话）
+    """
+    conversations = get_red_conversations(db=db, user_id=current_user.id, skip=skip, limit=limit)
+    return Result.success(conversations).to_dict()
