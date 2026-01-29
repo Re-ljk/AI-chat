@@ -140,14 +140,26 @@ def add_stream_message(db: Session, conversation_id: str, user_id: str, message_
     :param conversation_id: 对话ID
     :param user_id: 用户ID
     :param message_create: 消息创建数据
-    :return: 消息对象
+    :return: 消息对象或错误信息
     """
     db_conversation = get_conversation(db, conversation_id)
     if not db_conversation:
-        raise AppApiException(404, "对话不存在")
+        return {
+            "type": "error",
+            "data": {
+                "code": 404,
+                "message": "对话不存在"
+            }
+        }
     
     if db_conversation.user_id != user_id:
-        raise AppApiException(403, "没有权限向其他用户的对话添加消息")
+        return {
+            "type": "error",
+            "data": {
+                "code": 403,
+                "message": "没有权限向其他用户的对话添加消息"
+            }
+        }
     
     message = {
         "role": message_create.get("role", "user"),

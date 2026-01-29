@@ -115,16 +115,15 @@ async def stream_message_endpoint(
     """
     流式问答接口
     """
-    if message_create.stream:
+    message_result = add_stream_message(db=db, conversation_id=conversation_id, user_id=current_user.id, message_create=message_create.dict())
+    
+    if isinstance(message_result, dict) and "type" in message_result:
         async def generate():
-            yield json.dumps({
-                "type": "message",
-                "data": add_stream_message(db=db, conversation_id=conversation_id, user_id=current_user.id, message_create=message_create.dict())
-            }).encode('utf-8') + b'\n\n'
+            yield json.dumps(message_result).encode('utf-8') + b'\n\n'
         
         return StreamingResponse(generate(), media_type="text/event-stream")
     else:
-        return Result.success(add_message(db=db, conversation_id=conversation_id, user_id=current_user.id, message_create=message_create)).to_dict()
+        return Result.success(message_result).to_dict()
 
 
 @router.post("/{conversation_id}/stream/save")
