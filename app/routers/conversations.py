@@ -59,6 +59,20 @@ def get_conversations_endpoint(
     return Result.success(conversations).to_dict()
 
 
+@router.get("/red")
+def get_red_conversations_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取红对话列表（多轮会话）
+    """
+    conversations = get_red_conversations(db=db, user_id=current_user.id, skip=skip, limit=limit)
+    return Result.success(conversations).to_dict()
+
+
 @router.get("/{conversation_id}")
 def get_conversation_endpoint(
     conversation_id: str,
@@ -117,13 +131,21 @@ async def stream_message_endpoint(
     """
     message_result = add_stream_message(db=db, conversation_id=conversation_id, user_id=current_user.id, message_create=message_create.dict())
     
-    if isinstance(message_result, dict) and "type" in message_result:
-        async def generate():
+    async def generate():
+        if isinstance(message_result, dict) and "type" in message_result:
             yield json.dumps(message_result).encode('utf-8') + b'\n\n'
+        else:
+            yield json.dumps({
+                "type": "message",
+                "data": message_result
+            }).encode('utf-8') + b'\n\n'
         
-        return StreamingResponse(generate(), media_type="text/event-stream")
-    else:
-        return Result.success(message_result).to_dict()
+        yield json.dumps({
+            "type": "done",
+            "data": {"message": "流式响应结束"}
+        }).encode('utf-8') + b'\n\n'
+    
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 
 @router.post("/{conversation_id}/stream/save")
@@ -137,17 +159,3 @@ def save_stream_message_endpoint(
     保存流式消息到数据库
     """
     return Result.success(save_stream_message(db=db, conversation_id=conversation_id, user_id=current_user.id, message=message)).to_dict()
-
-
-@router.get("/red")
-def get_red_conversations_endpoint(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    获取红对话列表（多轮会话）
-    """
-    conversations = get_red_conversations(db=db, user_id=current_user.id, skip=skip, limit=limit)
-    return Result.success(conversations).to_dict()

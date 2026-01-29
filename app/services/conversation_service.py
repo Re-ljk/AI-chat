@@ -179,6 +179,8 @@ def save_stream_message(db: Session, conversation_id: str, user_id: str, message
     :param message: 消息对象
     :return: 更新后的对话对象
     """
+    from sqlalchemy.orm.attributes import flag_modified
+    
     db_conversation = get_conversation(db, conversation_id)
     if not db_conversation:
         raise AppApiException(404, "对话不存在")
@@ -190,6 +192,7 @@ def save_stream_message(db: Session, conversation_id: str, user_id: str, message
         db_conversation.content = []
     
     db_conversation.content.append(message)
+    flag_modified(db_conversation, "content")
     db.commit()
     db.refresh(db_conversation)
     return db_conversation
