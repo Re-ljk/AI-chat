@@ -6,7 +6,7 @@
     @desc: AI对话模型
 """
 
-from sqlalchemy import Boolean, Column, String, DateTime, Integer, Text
+from sqlalchemy import Boolean, Column, String, DateTime, Integer, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from app.database.base import Base
@@ -16,6 +16,7 @@ class AIConversation(Base):
     __tablename__ = "ai_conversations"
 
     id = Column(String, primary_key=True, index=True)
+    session_id = Column(String, ForeignKey("sessions.id"), index=True, nullable=False)
     user_id = Column(String, index=True, nullable=False)
     title = Column(String, nullable=False)
     content = Column(JSONB, nullable=False)

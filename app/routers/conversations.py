@@ -8,10 +8,11 @@
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+import json
 
 from app.database.base import get_db
-from app.schemas.conversation import ConversationCreate, ConversationResponse, ConversationDetailResponse, MessageCreate
-from app.services.conversation_service import get_conversation, get_conversations, create_conversation, delete_conversation, add_message, get_messages
+from app.schemas.conversation import ConversationCreate, ConversationResponse, ConversationDetailResponse, MessageCreate, StreamRequest
+from app.services.conversation_service import get_conversation, get_conversations, create_conversation, delete_conversation, add_message, get_messages, stream_chat
 from app.common.core.result import Result, AppApiException
 from app.models.user import User
 from app.services.auth_service import get_current_user
@@ -101,3 +102,28 @@ def get_messages_endpoint(
     """
     messages = get_messages(db=db, conversation_id=conversation_id, user_id=current_user.id)
     return Result.success(messages).to_dict()
+
+
+@router.post("/stream")
+async def stream_chat_endpoint(
+    stream_request: StreamRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    流式问答接口
+    """
+    from fastapi.responses import StreamingResponse
+    
+    conversation = stream_chat(db=db, session_id=stream_request.session_id, user_id=current_user.id, stream_request=stream_request)
+    
+    async def generate():
+        yield f"data: {json.dumps({'type': 'start', 'conversation': conversation.to_dict()}, ensure_ascii=False)}\n\n"
+        
+        yield f"data: {json.dumps({'type': 'message', 'message': {'role': 'user', 'content': stream_request.content}}, ensure_ascii=False)}\n\n"
+        
+        yield f"data: {json.dumps({'type': 'message', 'message': {'role': 'assistant', 'content': '这是一个模拟的AI回复'}}, ensure_ascii=False)}\n\n"
+        
+        yield f"data: {json.dumps({'type': 'end'}, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(generate(), media_type="text/event-stream")

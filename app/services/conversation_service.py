@@ -11,8 +11,8 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.common.core.result import AppApiException
-from app.models import AIConversation
-from app.schemas.conversation import ConversationCreate, MessageCreate
+from app.models import AIConversation, Session
+from app.schemas.conversation import ConversationCreate, MessageCreate, StreamRequest
 
 
 def get_conversation(db: Session, conversation_id: str):
@@ -48,8 +48,16 @@ def create_conversation(db: Session, user_id: str, conversation_create: Conversa
     :param conversation_create: 对话创建数据
     :return: 创建的对话对象
     """
+    session = db.query(Session).filter(Session.id == conversation_create.session_id).first()
+    if not session:
+        raise AppApiException(404, "会话不存在")
+    
+    if session.user_id != user_id:
+        raise AppApiException(403, "没有权限在其他用户的会话中创建对话")
+    
     db_conversation = AIConversation(
         id=str(uuid.uuid1()),
+        session_id=conversation_create.session_id,
         user_id=user_id,
         title=conversation_create.title,
         model=conversation_create.model,
@@ -131,3 +139,50 @@ def get_messages(db: Session, conversation_id: str, user_id: str):
         raise AppApiException(403, "没有权限查看其他用户的对话消息")
     
     return db_conversation.content or []
+
+
+def stream_chat(db: Session, session_id: str, user_id: str, stream_request: StreamRequest):
+    """
+    流式问答
+    :param db: 数据库会话
+    :param session_id: 会话ID
+    :param user_id: 用户ID
+    :param stream_request: 流式问答请求
+    :return: 对话对象
+    """
+    session = db.query(Session).filter(Session.id == session_id).first()
+    if not session:
+        raise AppApiException(404, "会话不存在")
+    
+    if session.user_id != user_id:
+        raise AppApiException(403, "没有权限在其他用户的会话中进行流式问答")
+    
+    user_message = {
+        "role": "user",
+        "content": stream_request.content,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    db_conversation = get_conversation(db, session_id)
+    if db_conversation:
+        if db_conversation.content is None:
+            db_conversation.content = []
+        db_conversation.content.append(user_message)
+        db.commit()
+        db.refresh(db_conversation)
+        return db_conversation
+    else:
+        new_conversation = AIConversation(
+            id=str(uuid.uuid1()),
+            session_id=session_id,
+            user_id=user_id,
+            title=f"对话 {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}",
+            model=stream_request.model,
+            content=[user_message],
+            total_tokens=0,
+            is_active=True
+        )
+        db.add(new_conversation)
+        db.commit()
+        db.refresh(new_conversation)
+        return new_conversation
