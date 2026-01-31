@@ -184,8 +184,8 @@
 ### 1. 克隆项目
 
 ```bash
-git clone <repository-url>
-cd GitLab
+git clone -b ai_chat_g2_jiangkuanli http://47.108.29.156/baoxian_backend/backendLearning.git
+cd backendLearning
 ```
 
 ### 2. 后端安装
