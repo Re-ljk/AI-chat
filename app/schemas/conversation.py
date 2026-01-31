@@ -30,13 +30,27 @@ class Message(BaseModel):
 class ConversationCreate(BaseModel):
     """对话创建模型"""
     title: str = Field(min_length=1, max_length=200, examples=["新对话"])
-    model: Optional[str] = Field(default="gpt-3.5-turbo", examples=["gpt-3.5-turbo"])
+    model: Optional[str] = Field(default="deepseek-chat", examples=["deepseek-chat"])
 
     class Config:
         json_schema_extra = {
             "example": {
                 "title": "新对话",
-                "model": "gpt-3.5-turbo"
+                "model": "deepseek-chat"
+            }
+        }
+
+
+class ConversationUpdate(BaseModel):
+    """对话更新模型"""
+    title: Optional[str] = Field(None, min_length=1, max_length=200, examples=["更新的对话标题"])
+    is_pinned: Optional[bool] = Field(None, examples=[True, False])
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "title": "更新的对话标题",
+                "is_pinned": True
             }
         }
 

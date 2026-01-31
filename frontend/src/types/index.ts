@@ -1,7 +1,7 @@
 export interface User {
   id: string
   username: string
-  nickname: string
+  full_name: string
   email: string
   created_at: string
   updated_at: string
@@ -15,7 +15,7 @@ export interface LoginRequest {
 export interface RegisterRequest {
   username: string
   password: string
-  nickname: string
+  full_name: string
   email: string
 }
 
@@ -38,6 +38,7 @@ export interface Conversation {
   content: Message[]
   total_tokens: number
   is_active: boolean
+  is_pinned?: boolean
   created_at: string
   updated_at: string
 }

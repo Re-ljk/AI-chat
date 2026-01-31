@@ -86,6 +86,36 @@ def delete_conversation(db: Session, conversation_id: str, user_id: str):
     return db_conversation
 
 
+def update_conversation(db: Session, conversation_id: str, user_id: str, conversation_update: dict):
+    """
+    更新对话
+    :param db: 数据库会话
+    :param conversation_id: 对话ID
+    :param user_id: 用户ID
+    :param conversation_update: 对话更新数据
+    :return: 更新后的对话对象
+    """
+    from sqlalchemy.orm.attributes import flag_modified
+    
+    db_conversation = get_conversation(db, conversation_id)
+    if not db_conversation:
+        raise AppApiException(404, "对话不存在")
+    
+    if db_conversation.user_id != user_id:
+        raise AppApiException(403, "没有权限更新其他用户的对话")
+    
+    if 'title' in conversation_update:
+        db_conversation.title = conversation_update['title']
+    
+    if 'is_pinned' in conversation_update:
+        db_conversation.is_pinned = conversation_update['is_pinned']
+        flag_modified(db_conversation, "is_pinned")
+    
+    db.commit()
+    db.refresh(db_conversation)
+    return db_conversation
+
+
 def add_message(db: Session, conversation_id: str, user_id: str, message_create: MessageCreate):
     """
     向对话添加消息
@@ -232,7 +262,7 @@ def generate_ai_response_with_langchain(
     )
 
 
-def summarize_conversation_with_langchain(
+async def summarize_conversation_with_langchain(
     conversation_history: List[Dict[str, Any]]
 ) -> str:
     """
@@ -241,10 +271,10 @@ def summarize_conversation_with_langchain(
     :param conversation_history: 对话历史
     :return: 对话总结
     """
-    return langchain_service.summarize_conversation(conversation_history)
+    return await langchain_service.summarize_conversation(conversation_history)
 
 
-def get_conversation_context(
+async def get_conversation_context(
     conversation_history: List[Dict[str, Any]],
     max_context_length: int = 10
 ) -> str:
@@ -255,7 +285,7 @@ def get_conversation_context(
     :param max_context_length: 最大上下文长度
     :return: 上下文文本
     """
-    return langchain_service.get_context_from_history(
+    return await langchain_service.get_context(
         conversation_history=conversation_history,
         max_context_length=max_context_length
     )

@@ -128,7 +128,7 @@ frontend/
 ## 注意事项
 
 - 确保 后端 API 服务已启动
-- 确保 已配置有效的 OpenAI API 密钥（用于 LangChain 功能）
+- 确保 已配置有效的 DeepSeek API 密钥（用于 LangChain 功能）
 - 浏览器需要支持 EventSource（现代浏览器都支持）
 
 ## 浏览器支持

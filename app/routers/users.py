@@ -25,6 +25,11 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     return Result.success(create_user(db=db, user=user)).to_dict()
 
 
+@router.get("/me")
+def read_current_user(current_user: User = Depends(get_current_user)):
+    return Result.success(current_user).to_dict()
+
+
 @router.put("/{user_id}")
 def update_user_endpoint(
     user_id: str,

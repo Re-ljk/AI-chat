@@ -65,7 +65,7 @@ function Register() {
           </Form.Item>
 
           <Form.Item
-            name="nickname"
+            name="full_name"
             rules={[
               { required: true, message: '请输入昵称' }
             ]}

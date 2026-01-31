@@ -21,8 +21,10 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
+  console.log('Request interceptor - Token from localStorage:', token)
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+    console.log('Request interceptor - Authorization header:', config.headers.Authorization)
   }
   return config
 })
@@ -41,12 +43,20 @@ api.interceptors.response.use(
 
 export const authApi = {
   login: async (data: LoginRequest): Promise<TokenResponse> => {
-    const response = await api.post<ApiResponse<TokenResponse>>('/auth/login', data)
-    return response.data.data
+    const formData = new URLSearchParams()
+    formData.append('username', data.username)
+    formData.append('password', data.password)
+    
+    const response = await api.post<TokenResponse>('/auth/login', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    })
+    return response.data
   },
   
   register: async (data: RegisterRequest): Promise<void> => {
-    await api.post('/users/', data)
+    await api.post('/users/register', data)
   },
   
   getCurrentUser: async (): Promise<any> => {
@@ -76,6 +86,11 @@ export const conversationApi = {
   deleteConversation: async (id: string): Promise<void> => {
     await api.delete(`/conversations/${id}`)
   },
+
+  updateConversation: async (id: string, data: Partial<CreateConversationRequest & { is_pinned: boolean }>): Promise<Conversation> => {
+    const response = await api.put<ApiResponse<Conversation>>(`/conversations/${id}`, data)
+    return response.data.data
+  },
   
   getMessages: async (id: string): Promise<Message[]> => {
     const response = await api.get<ApiResponse<Message[]>>(`/conversations/${id}/messages`)
@@ -89,33 +104,63 @@ export const conversationApi = {
   
   streamMessage: async (id: string, content: string, onMessage: (data: any) => void, onError: (error: any) => void) => {
     const token = localStorage.getItem('token')
-    const eventSource = new EventSource(
-      `${API_BASE_URL}/conversations/${id}/stream?token=${token}`,
-      {
+    
+    const controller = new AbortController()
+    const signal = controller.signal
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/conversations/${id}/stream`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ role: 'user', content })
-      }
-    )
+        body: JSON.stringify({ role: 'user', content }),
+        signal
+      })
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        onMessage(data)
-      } catch (error) {
-        console.error('Error parsing SSE message:', error)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (reader) {
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          buffer += chunk
+
+          // 处理完整的JSON对象（以\n\n分隔）
+          const messages = buffer.split('\n\n')
+          for (let i = 0; i < messages.length - 1; i++) {
+            const message = messages[i]
+            if (message.trim()) {
+              try {
+                const data = JSON.parse(message)
+                onMessage(data)
+              } catch (error) {
+                console.error('Error parsing SSE message:', error)
+              }
+            }
+          }
+          // 保留未处理的部分
+          buffer = messages[messages.length - 1]
+        }
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        onError(error)
       }
     }
 
-    eventSource.onerror = (error) => {
-      console.error('SSE error:', error)
-      onError(error)
-      eventSource.close()
+    return {
+      close: () => controller.abort()
     }
-
-    return eventSource
   },
 
   saveStreamMessage: async (id: string, message: Message): Promise<Conversation> => {

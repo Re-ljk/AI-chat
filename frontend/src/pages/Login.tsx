@@ -17,12 +17,26 @@ function Login() {
     setLoading(true)
     try {
       const tokenResponse = await authApi.login(values)
+      
+      console.log('Login response:', tokenResponse)
+      console.log('Access token:', tokenResponse.access_token)
+      
+      localStorage.setItem('token', tokenResponse.access_token)
+      
+      const savedToken = localStorage.getItem('token')
+      console.log('Saved token:', savedToken)
+      
       const userData = await authApi.getCurrentUser()
       
+      console.log('User data:', userData)
+      
       login(tokenResponse.access_token, userData)
+      
       message.success('登录成功')
-      navigate('/chat')
+      
+      window.location.href = '/chat'
     } catch (error: any) {
+      console.error('Login error:', error)
       message.error(error.response?.data?.message || '登录失败，请检查用户名和密码')
     } finally {
       setLoading(false)

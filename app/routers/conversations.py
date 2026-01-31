@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 import json
 
 from app.database.base import get_db
-from app.schemas.conversation import ConversationCreate, ConversationResponse, ConversationDetailResponse, MessageCreate, StreamMessageCreate
-from app.services.conversation_service import get_conversation, get_conversations, create_conversation, delete_conversation, add_message, get_messages, add_stream_message, save_stream_message, get_red_conversations, generate_ai_response_with_langchain, summarize_conversation_with_langchain, get_conversation_context, is_langchain_initialized
+from app.schemas.conversation import ConversationCreate, ConversationResponse, ConversationDetailResponse, MessageCreate, StreamMessageCreate, ConversationUpdate
+from app.services.conversation_service import get_conversation, get_conversations, create_conversation, delete_conversation, add_message, get_messages, add_stream_message, save_stream_message, get_red_conversations, generate_ai_response_with_langchain, summarize_conversation_with_langchain, get_conversation_context, is_langchain_initialized, update_conversation
 from app.common.core.result import Result, AppApiException
 from app.models.user import User
 from app.services.auth_service import get_current_user
@@ -43,6 +43,20 @@ def delete_conversation_endpoint(
     删除对话
     """
     return Result.success(delete_conversation(db=db, conversation_id=conversation_id, user_id=current_user.id)).to_dict()
+
+
+@router.put("/{conversation_id}")
+def update_conversation_endpoint(
+    conversation_id: str,
+    conversation_update: ConversationUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    更新对话
+    """
+    conversation = update_conversation(db=db, conversation_id=conversation_id, user_id=current_user.id, conversation_update=conversation_update)
+    return Result.success(conversation).to_dict()
 
 
 @router.get("/langchain/status")
@@ -153,10 +167,57 @@ async def stream_message_endpoint(
                 "data": message_result
             }).encode('utf-8') + b'\n\n'
         
-        yield json.dumps({
-            "type": "done",
-            "data": {"message": "流式响应结束"}
-        }).encode('utf-8') + b'\n\n'
+        # 生成AI回复
+        conversation = get_conversation(db=db, conversation_id=conversation_id)
+        if conversation:
+            # 获取对话历史
+            conversation_history = conversation.content or []
+            
+            # 使用LangChain生成AI回复
+            ai_result = await generate_ai_response_with_langchain(
+                conversation_history=conversation_history,
+                user_message=message_create.content
+            )
+            
+            if ai_result["success"]:
+                ai_response = ai_result["response"]
+                
+                # 模拟流式返回
+                for i in range(0, len(ai_response), 50):
+                    chunk = ai_response[i:i+50]
+                    yield json.dumps({
+                        "type": "message",
+                        "data": {
+                            "role": "assistant",
+                            "content": chunk
+                        }
+                    }).encode('utf-8') + b'\n\n'
+                    import asyncio
+                    await asyncio.sleep(0.1)
+                
+                yield json.dumps({
+                    "type": "done",
+                    "data": {
+                        "message": "流式响应结束",
+                        "content": ai_response
+                    }
+                }).encode('utf-8') + b'\n\n'
+            else:
+                yield json.dumps({
+                    "type": "error",
+                    "data": {
+                        "code": 500,
+                        "message": ai_result["error"] or "生成AI回复失败"
+                    }
+                }).encode('utf-8') + b'\n\n'
+        else:
+            yield json.dumps({
+                "type": "error",
+                "data": {
+                    "code": 404,
+                    "message": "对话不存在"
+                }
+            }).encode('utf-8') + b'\n\n'
     
     return StreamingResponse(generate(), media_type="text/event-stream")
 
@@ -208,7 +269,7 @@ async def generate_ai_response_endpoint(
 
 
 @router.get("/{conversation_id}/summary")
-def get_conversation_summary_endpoint(
+async def get_conversation_summary_endpoint(
     conversation_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -225,16 +286,19 @@ def get_conversation_summary_endpoint(
     
     conversation_history = conversation.content or []
     
-    summary = summarize_conversation_with_langchain(conversation_history=conversation_history)
+    summary_result = await summarize_conversation_with_langchain(conversation_history=conversation_history)
     
-    return Result.success({
-        "summary": summary,
-        "message_count": len(conversation_history)
-    }).to_dict()
+    if summary_result["success"]:
+        return Result.success({
+            "summary": summary_result["summary"],
+            "message_count": summary_result["message_count"]
+        }).to_dict()
+    else:
+        raise AppApiException(500, f"对话总结失败: {summary_result['error']}")
 
 
 @router.get("/{conversation_id}/context")
-def get_conversation_context_endpoint(
+async def get_conversation_context_endpoint(
     conversation_id: str,
     max_context_length: int = 10,
     db: Session = Depends(get_db),
@@ -252,16 +316,19 @@ def get_conversation_context_endpoint(
     
     conversation_history = conversation.content or []
     
-    context = get_conversation_context(
+    context_result = await get_conversation_context(
         conversation_history=conversation_history,
         max_context_length=max_context_length
     )
     
-    return Result.success({
-        "context": context,
-        "message_count": len(conversation_history),
-        "max_context_length": max_context_length
-    }).to_dict()
+    if context_result["success"]:
+        return Result.success({
+            "context": context_result["context"],
+            "message_count": context_result["message_count"],
+            "max_context_length": context_result["max_context_length"]
+        }).to_dict()
+    else:
+        raise AppApiException(500, f"获取对话上下文失败: {context_result['error']}")
 
 
 @router.get("/langchain/status")

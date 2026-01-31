@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Layout, List, Input, Button, Card, Typography, Space, message, Modal, Drawer, Tag, Tooltip, Spin } from 'antd'
+import { Layout, List, Input, Button, Card, Typography, Space, message, Modal, Drawer, Tag, Tooltip, Spin, Popover } from 'antd'
 import { 
   PlusOutlined, 
   DeleteOutlined, 
@@ -8,12 +8,27 @@ import {
   RobotOutlined,
   UserOutlined,
   CopyOutlined,
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  StopOutlined,
+  RedoOutlined,
+  SettingOutlined,
+  SearchOutlined,
+  EditOutlined,
+  DownloadOutlined,
+  StarOutlined,
+  StarFilled,
+  BellOutlined,
+  SmileOutlined,
+  UploadOutlined
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { conversationApi } from '../services/api'
 import { useAuth } from '../hooks/useAuth'
 import type { Conversation, Message } from '../types'
+import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import EmojiPicker from 'emoji-picker-react'
 
 const { Sider, Content } = Layout
 const { TextArea } = Input
@@ -32,6 +47,20 @@ function Chat() {
   const [contextVisible, setContextVisible] = useState(false)
   const [context, setContext] = useState<{ context: string, message_count: number, max_context_length: number } | null>(null)
   const [langChainStatus, setLangChainStatus] = useState<{ initialized: boolean, message: string } | null>(null)
+  const [settingsVisible, setSettingsVisible] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [fontSize, setFontSize] = useState(14)
+  const [searchText, setSearchText] = useState('')
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [editingConversation, setEditingConversation] = useState<Conversation | null>(null)
+  const [newTitle, setNewTitle] = useState('')
+  const [eventSource, setEventSource] = useState<any>(null)
+  const [emojiPickerVisible, setEmojiPickerVisible] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [messageSearchText, setMessageSearchText] = useState('')
+  const [searchResults, setSearchResults] = useState<number[]>([])
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   
   const navigate = useNavigate()
   const { logout, user } = useAuth()
@@ -161,7 +190,130 @@ function Chat() {
     try {
       let fullResponse = ''
       
-      const eventSource = conversationApi.streamMessage(
+      const source = conversationApi.streamMessage(
+        currentConversation.id,
+        userMessage.content,
+        (data) => {
+          if (data.type === 'message') {
+            fullResponse += data.data.content
+            setStreamResponse(fullResponse)
+          } else if (data.type === 'done') {
+            setStreaming(false)
+            
+            const assistantMessage: Message = {
+              role: 'assistant',
+              content: fullResponse,
+              timestamp: new Date().toISOString()
+            }
+            
+            conversationApi.saveStreamMessage(currentConversation.id, assistantMessage)
+            setMessages([...messages, userMessage, assistantMessage])
+            setStreamResponse('')
+            showNotification('AI回复', 'AI已生成回复')
+          } else if (data.type === 'error') {
+            setStreaming(false)
+            message.error(data.data.message || '发送消息失败')
+            showNotification('错误', data.data.message || '发送消息失败')
+          }
+        },
+        (error) => {
+          setStreaming(false)
+          message.error('连接失败')
+        }
+      )
+      
+      setEventSource(source)
+    } catch (error: any) {
+      setStreaming(false)
+      message.error('发送消息失败')
+    }
+  }
+
+  const handleEmojiClick = (emojiData: any) => {
+    setInputValue(prev => prev + emojiData.emoji)
+    setEmojiPickerVisible(false)
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    setUploadedFiles(prev => [...prev, ...files])
+  }
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleFileUploadClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const searchMessages = (text: string) => {
+    setMessageSearchText(text)
+    if (!text.trim()) {
+      setSearchResults([])
+      return
+    }
+    
+    const results: number[] = []
+    messages.forEach((msg, index) => {
+      if (msg.content.toLowerCase().includes(text.toLowerCase())) {
+        results.push(index)
+      }
+    })
+    setSearchResults(results)
+  }
+
+  const highlightText = (text: string, highlight: string) => {
+    if (!highlight.trim()) return text
+    
+    const regex = new RegExp(`(${highlight})`, 'gi')
+    const parts = text.split(regex)
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <span key={index} style={{ background: '#ffeb3b', padding: '0 2px', borderRadius: '2px' }}>
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    )
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    message.success('已复制到剪贴板')
+  }
+
+  const stopGeneration = () => {
+    if (eventSource) {
+      eventSource.close()
+      setStreaming(false)
+      message.info('已停止生成')
+    }
+  }
+
+  const regenerateLastResponse = async () => {
+    if (!currentConversation || messages.length === 0) return
+    
+    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
+    if (!lastUserMessage) return
+
+    const userMessage: Message = {
+      role: 'user',
+      content: lastUserMessage.content,
+      timestamp: new Date().toISOString()
+    }
+
+    setMessages([...messages, userMessage])
+    setInputValue('')
+    setStreaming(true)
+    setStreamResponse('')
+
+    try {
+      let fullResponse = ''
+      
+      const source = conversationApi.streamMessage(
         currentConversation.id,
         userMessage.content,
         (data) => {
@@ -190,19 +342,129 @@ function Chat() {
           message.error('连接失败')
         }
       )
-
-      return () => {
-        eventSource.close()
-      }
+      
+      setEventSource(source)
     } catch (error: any) {
       setStreaming(false)
       message.error('发送消息失败')
     }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    message.success('已复制到剪贴板')
+  const exportMessages = () => {
+    if (!currentConversation || messages.length === 0) {
+      message.warning('没有可导出的消息')
+      return
+    }
+
+    const exportData = {
+      conversation: {
+        id: currentConversation.id,
+        title: currentConversation.title,
+        model: currentConversation.model,
+        created_at: currentConversation.created_at
+      },
+      messages: messages,
+      exported_at: new Date().toISOString()
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `conversation_${currentConversation.title}_${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    message.success('导出成功')
+  }
+
+  const openEditModal = (conversation: Conversation, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingConversation(conversation)
+    setNewTitle(conversation.title)
+    setEditModalVisible(true)
+  }
+
+  const handleEditTitle = async () => {
+    if (!editingConversation || !newTitle.trim()) return
+
+    try {
+      await conversationApi.updateConversation(editingConversation.id, { title: newTitle })
+      setConversations(conversations.map(c => 
+        c.id === editingConversation.id ? { ...c, title: newTitle } : c
+      ))
+      if (currentConversation?.id === editingConversation.id) {
+        setCurrentConversation({ ...currentConversation, title: newTitle })
+      }
+      message.success('修改成功')
+      setEditModalVisible(false)
+    } catch (error) {
+      message.error('修改失败')
+    }
+  }
+
+  const togglePin = async (conversation: Conversation, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const updated = await conversationApi.updateConversation(conversation.id, { 
+        is_pinned: !conversation.is_pinned 
+      })
+      setConversations(conversations.map(c => 
+        c.id === conversation.id ? { ...c, is_pinned: !c.is_pinned } : c
+      ))
+      message.success(conversation.is_pinned ? '已取消置顶' : '已置顶')
+    } catch (error) {
+      message.error('操作失败')
+    }
+  }
+
+  const filteredConversations = conversations.filter(conv => 
+    conv.title.toLowerCase().includes(searchText.toLowerCase())
+  ).sort((a, b) => {
+    if (a.is_pinned && !b.is_pinned) return -1
+    if (!a.is_pinned && b.is_pinned) return 1
+    return 0
+  })
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'k') {
+          e.preventDefault()
+          document.querySelector('input[placeholder*="搜索"]')?.dispatchEvent(new Event('focus'))
+        } else if (e.key === 'n') {
+          e.preventDefault()
+          createNewConversation()
+        } else if (e.key === 'e') {
+          e.preventDefault()
+          exportMessages()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentConversation, messages])
+
+  useEffect(() => {
+    if ('Notification' in window && notificationsEnabled) {
+      Notification.requestPermission().then(permission => {
+        if (permission !== 'granted') {
+          message.warning('未启用通知权限')
+          setNotificationsEnabled(false)
+        }
+      })
+    }
+  }, [notificationsEnabled])
+
+  const showNotification = (title: string, body: string) => {
+    if (notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico'
+      })
+    }
   }
 
   const handleLogout = () => {
@@ -238,12 +500,19 @@ function Chat() {
             >
               新建对话
             </Button>
+            <Input
+              placeholder="搜索对话 (Ctrl+K)"
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+            />
           </Space>
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
           <List
-            dataSource={conversations}
+            dataSource={filteredConversations}
             renderItem={(item) => (
               <List.Item
                 style={{
@@ -251,20 +520,42 @@ function Chat() {
                   borderRadius: '8px',
                   cursor: 'pointer',
                   background: currentConversation?.id === item.id ? '#f0f7ff' : 'transparent',
-                  marginBottom: '8px'
+                  marginBottom: '8px',
+                  border: item.is_pinned ? '1px solid #667eea' : 'none'
                 }}
                 onClick={() => selectConversation(item)}
                 actions={[
-                  <Button
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={(e) => deleteConversation(item.id, e)}
-                  />
+                  <Tooltip title="编辑">
+                    <Button
+                      type="text"
+                      icon={<EditOutlined />}
+                      onClick={(e) => openEditModal(item, e)}
+                    />
+                  </Tooltip>,
+                  <Tooltip title={item.is_pinned ? '取消置顶' : '置顶'}>
+                    <Button
+                      type="text"
+                      icon={item.is_pinned ? <StarFilled style={{ color: '#667eea' }} /> : <StarOutlined />}
+                      onClick={(e) => togglePin(item, e)}
+                    />
+                  </Tooltip>,
+                  <Tooltip title="删除">
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={(e) => deleteConversation(item.id, e)}
+                    />
+                  </Tooltip>
                 ]}
               >
                 <List.Item.Meta
-                  title={item.title}
+                  title={
+                    <Space>
+                      {item.is_pinned && <StarFilled style={{ color: '#667eea', fontSize: '12px' }} />}
+                      {item.title}
+                    </Space>
+                  }
                   description={`${item.content?.length || 0} 条消息`}
                 />
               </List.Item>
@@ -308,6 +599,37 @@ function Chat() {
                 )}
               </Space>
               <Space>
+                {messages.length > 0 && (
+                  <>
+                    <Tooltip title="搜索消息">
+                      <Input
+                        placeholder="搜索消息"
+                        prefix={<SearchOutlined />}
+                        value={messageSearchText}
+                        onChange={(e) => searchMessages(e.target.value)}
+                        style={{ width: 200 }}
+                        allowClear
+                      />
+                    </Tooltip>
+                    <Tooltip title="重新生成">
+                      <Button
+                        icon={<RedoOutlined />}
+                        onClick={regenerateLastResponse}
+                        disabled={streaming}
+                      >
+                        重新生成
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="导出对话 (Ctrl+E)">
+                      <Button
+                        icon={<DownloadOutlined />}
+                        onClick={exportMessages}
+                      >
+                        导出
+                      </Button>
+                    </Tooltip>
+                  </>
+                )}
                 <Tooltip title="对话总结">
                   <Button
                     icon={<MessageOutlined />}
@@ -325,6 +647,12 @@ function Chat() {
                   >
                     上下文
                   </Button>
+                </Tooltip>
+                <Tooltip title="设置">
+                  <Button
+                    icon={<SettingOutlined />}
+                    onClick={() => setSettingsVisible(true)}
+                  />
                 </Tooltip>
               </Space>
             </div>
@@ -358,26 +686,80 @@ function Chat() {
                   style={{
                     display: 'flex',
                     marginBottom: '24px',
-                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                    animation: 'fadeIn 0.3s ease-in'
                   }}
                 >
                   <Card
                     style={{
                       maxWidth: '70%',
-                      background: msg.role === 'user' ? '#667eea' : '#fff',
+                      background: msg.role === 'user' 
+                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                        : '#fff',
                       color: msg.role === 'user' ? '#fff' : '#333',
-                      border: msg.role === 'user' ? 'none' : '1px solid #f0f0f0'
+                      border: msg.role === 'user' ? 'none' : '1px solid #f0f0f0',
+                      fontSize: `${fontSize}px`,
+                      borderRadius: msg.role === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.3s ease'
                     }}
+                    hoverable
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                       {msg.role === 'assistant' && (
-                        <RobotOutlined style={{ fontSize: '20px', marginTop: '4px' }} />
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <RobotOutlined style={{ color: '#fff', fontSize: '16px' }} />
+                        </div>
                       )}
                       <div style={{ flex: 1 }}>
-                        <Paragraph style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                          {msg.content}
-                        </Paragraph>
-                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                        {msg.role === 'assistant' ? (
+                          <ReactMarkdown
+                            components={{
+                              code({ node, inline, className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || '')
+                                return !inline && match ? (
+                                  <SyntaxHighlighter
+                                    style={vscDarkPlus}
+                                    language={match[1]}
+                                    PreTag="div"
+                                    {...props}
+                                  >
+                                    {String(children).replace(/\n$/, '')}
+                                  </SyntaxHighlighter>
+                                ) : (
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                )
+                              }
+                            }}
+                          >
+                            {messageSearchText && searchResults.includes(index) 
+                              ? highlightText(msg.content, messageSearchText)
+                              : msg.content}
+                          </ReactMarkdown>
+                        ) : (
+                          <Paragraph style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                            {messageSearchText && searchResults.includes(index)
+                              ? highlightText(msg.content, messageSearchText)
+                              : msg.content}
+                          </Paragraph>
+                        )}
+                        <Text type={msg.role === 'user' ? 'secondary' : 'secondary'} style={{ 
+                          fontSize: '12px', 
+                          color: msg.role === 'user' ? 'rgba(255,255,255,0.7)' : undefined,
+                          display: 'block',
+                          marginTop: '8px'
+                        }}>
                           {new Date(msg.timestamp).toLocaleString()}
                         </Text>
                       </div>
@@ -387,6 +769,7 @@ function Chat() {
                           icon={<CopyOutlined />}
                           onClick={() => copyToClipboard(msg.content)}
                           size="small"
+                          style={{ color: msg.role === 'user' ? '#fff' : undefined }}
                         />
                       )}
                     </div>
@@ -399,23 +782,71 @@ function Chat() {
                   style={{
                     display: 'flex',
                     marginBottom: '24px',
-                    justifyContent: 'flex-start'
+                    justifyContent: 'flex-start',
+                    animation: 'fadeIn 0.3s ease-in'
                   }}
                 >
                   <Card
                     style={{
                       maxWidth: '70%',
                       background: '#fff',
-                      border: '1px solid #f0f0f0'
+                      border: '1px solid #f0f0f0',
+                      fontSize: `${fontSize}px`,
+                      borderRadius: '20px 20px 20px 4px',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.3s ease'
                     }}
+                    hoverable
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <RobotOutlined style={{ fontSize: '20px', marginTop: '4px' }} />
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <RobotOutlined style={{ color: '#fff', fontSize: '16px' }} />
+                      </div>
                       <div style={{ flex: 1 }}>
-                        <Paragraph style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                        <ReactMarkdown
+                          components={{
+                            code({ node, inline, className, children, ...props }: any) {
+                              const match = /language-(\w+)/.exec(className || '')
+                              return !inline && match ? (
+                                <SyntaxHighlighter
+                                  style={vscDarkPlus}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  {...props}
+                                >
+                                  {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
+                              ) : (
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              )
+                            }
+                          }}
+                        >
                           {streamResponse}
-                        </Paragraph>
-                        <Spin size="small" style={{ marginLeft: '8px' }} />
+                        </ReactMarkdown>
+                        <Space style={{ marginTop: '8px' }}>
+                          <Spin size="small" />
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<StopOutlined />}
+                            onClick={stopGeneration}
+                            danger
+                          >
+                            停止生成
+                          </Button>
+                        </Space>
                       </div>
                     </div>
                   </Card>
@@ -432,7 +863,43 @@ function Chat() {
                 borderTop: '1px solid #f0f0f0'
               }}
             >
+              {uploadedFiles.length > 0 && (
+                <div style={{ marginBottom: '12px' }}>
+                  <Space wrap>
+                    {uploadedFiles.map((file, index) => (
+                      <Tag
+                        key={index}
+                        closable
+                        onClose={() => removeFile(index)}
+                        style={{
+                          background: '#f0f7ff',
+                          borderColor: '#667eea',
+                          color: '#667eea'
+                        }}
+                      >
+                        {file.name}
+                      </Tag>
+                    ))}
+                  </Space>
+                </div>
+              )}
               <Space.Compact style={{ width: '100%' }}>
+                <Popover
+                  content={<EmojiPicker onEmojiClick={handleEmojiClick} />}
+                  trigger="click"
+                  open={emojiPickerVisible}
+                  onOpenChange={setEmojiPickerVisible}
+                >
+                  <Button icon={<SmileOutlined />} />
+                </Popover>
+                <Button icon={<UploadOutlined />} onClick={handleFileUploadClick} />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                />
                 <TextArea
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
@@ -524,6 +991,123 @@ function Chat() {
           </div>
         )}
       </Drawer>
+
+      <Drawer
+        title="设置"
+        placement="right"
+        onClose={() => setSettingsVisible(false)}
+        open={settingsVisible}
+        width={400}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <div>
+            <Paragraph>
+              <Text strong>主题</Text>
+            </Paragraph>
+            <Space>
+              <Button
+                type={theme === 'light' ? 'primary' : 'default'}
+                onClick={() => setTheme('light')}
+              >
+                浅色
+              </Button>
+              <Button
+                type={theme === 'dark' ? 'primary' : 'default'}
+                onClick={() => setTheme('dark')}
+              >
+                深色
+              </Button>
+            </Space>
+          </div>
+
+          <div>
+            <Paragraph>
+              <Text strong>字体大小</Text>
+            </Paragraph>
+            <Space>
+              <Button
+                size="small"
+                onClick={() => setFontSize(Math.max(12, fontSize - 2))}
+              >
+                -
+              </Button>
+              <Text>{fontSize}px</Text>
+              <Button
+                size="small"
+                onClick={() => setFontSize(Math.min(20, fontSize + 2))}
+              >
+                +
+              </Button>
+            </Space>
+          </div>
+
+          <div>
+            <Paragraph>
+              <Text strong>消息通知</Text>
+            </Paragraph>
+            <Button
+              type={notificationsEnabled ? 'primary' : 'default'}
+              onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+            >
+              {notificationsEnabled ? '已启用' : '已禁用'}
+            </Button>
+          </div>
+
+          <div>
+            <Paragraph>
+              <Text strong>快捷键</Text>
+            </Paragraph>
+            <List
+              size="small"
+              dataSource={[
+                { key: 'Ctrl + K', desc: '搜索对话' },
+                { key: 'Ctrl + N', desc: '新建对话' },
+                { key: 'Ctrl + E', desc: '导出对话' },
+                { key: 'Enter', desc: '发送消息' },
+                { key: 'Shift + Enter', desc: '换行' }
+              ]}
+              renderItem={(item) => (
+                <List.Item>
+                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Text>{item.desc}</Text>
+                    <Tag>{item.key}</Tag>
+                  </Space>
+                </List.Item>
+              )}
+            />
+          </div>
+        </Space>
+      </Drawer>
+
+      <Modal
+        title="编辑对话标题"
+        open={editModalVisible}
+        onOk={handleEditTitle}
+        onCancel={() => setEditModalVisible(false)}
+        okText="确定"
+        cancelText="取消"
+      >
+        <Input
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="请输入新标题"
+          onPressEnter={handleEditTitle}
+          autoFocus
+        />
+      </Modal>
+
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </Layout>
   )
 }

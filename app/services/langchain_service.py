@@ -7,10 +7,9 @@
 """
 
 from typing import List, Dict, Any
-from langchain.memory import ConversationBufferMemory, ConversationSummaryMemory
-from langchain.chains import ConversationChain
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, MessagesPlaceholder
 
 from config import settings
 
@@ -25,79 +24,25 @@ class LangChainService:
         初始化LangChain服务
         """
         self.llm = None
-        self.conversation_memory = None
-        self.conversation_chain = None
         
-        # 如果配置了OpenAI API密钥，则初始化LLM
-        if hasattr(settings, 'OPENAI_API_KEY') and settings.OPENAI_API_KEY:
-            self._initialize_openai()
+        # 如果配置了DeepSeek API密钥，则初始化LLM
+        if hasattr(settings, 'DEEPSEEK_API_KEY') and settings.DEEPSEEK_API_KEY:
+            self._initialize_deepseek()
     
-    def _initialize_openai(self):
+    def _initialize_deepseek(self):
         """
-        初始化OpenAI LLM
+        初始化DeepSeek LLM
         """
         try:
             self.llm = ChatOpenAI(
-                openai_api_key=settings.OPENAI_API_KEY,
-                model="gpt-3.5-turbo",
+                openai_api_key=settings.DEEPSEEK_API_KEY,
+                base_url=settings.DEEPSEEK_BASE_URL,
+                model=settings.DEEPSEEK_MODEL,
                 temperature=0.7
             )
-            print("OpenAI LLM初始化成功")
+            print("DeepSeek LLM初始化成功")
         except Exception as e:
-            print(f"OpenAI LLM初始化失败: {e}")
-    
-    def create_conversation_memory(self, conversation_history: List[Dict[str, Any]]) -> ConversationBufferMemory:
-        """
-        从对话历史创建LangChain记忆对象
-        
-        :param conversation_history: 对话历史列表
-        :return: LangChain记忆对象
-        """
-        memory = ConversationBufferMemory()
-        
-        # 将对话历史转换为LangChain格式
-        for message in conversation_history:
-            role = message.get("role", "user")
-            content = message.get("content", "")
-            
-            if role == "user":
-                memory.chat_memory.add_user_message(content)
-            elif role == "assistant":
-                memory.chat_memory.add_ai_message(content)
-        
-        return memory
-    
-    def create_conversation_chain(self, memory: ConversationBufferMemory = None) -> ConversationChain:
-        """
-        创建对话链
-        
-        :param memory: LangChain记忆对象
-        :return: 对话链
-        """
-        if self.llm is None:
-            raise ValueError("LLM未初始化，请检查API密钥配置")
-        
-        if memory is None:
-            memory = ConversationBufferMemory()
-        
-        # 创建对话提示模板
-        prompt = ChatPromptTemplate.from_messages([
-            SystemMessagePromptTemplate.from_template(
-                "你是一个有用的AI助手。请根据对话历史提供有帮助的回答。"
-            ),
-            MessagesPlaceholder(variable_name="history"),
-            ("human", "{input}")
-        ])
-        
-        # 创建对话链
-        chain = ConversationChain(
-            llm=self.llm,
-            memory=memory,
-            prompt=prompt,
-            verbose=True
-        )
-        
-        return chain
+            print(f"DeepSeek LLM初始化失败: {e}")
     
     async def generate_response(
         self,
@@ -112,21 +57,32 @@ class LangChainService:
         :return: 包含AI回复和元数据的字典
         """
         try:
-            # 创建对话记忆
-            if conversation_history:
-                memory = self.create_conversation_memory(conversation_history)
-            else:
-                memory = ConversationBufferMemory()
+            if not self.llm:
+                return {
+                    "success": False,
+                    "response": None,
+                    "memory_used": len(conversation_history) if conversation_history else 0,
+                    "error": "LLM未初始化，请配置DEEPSEEK_API_KEY"
+                }
             
-            # 创建对话链
-            chain = self.create_conversation_chain(memory)
+            # 构建消息列表
+            messages = []
+            
+            if conversation_history:
+                for msg in conversation_history:
+                    if msg.get('role') == 'user':
+                        messages.append(HumanMessage(content=msg.get('content', '')))
+                    elif msg.get('role') == 'assistant':
+                        messages.append(AIMessage(content=msg.get('content', '')))
+            
+            messages.append(HumanMessage(content=user_message))
             
             # 生成回复
-            response = await chain.apredict(input=user_message)
+            response = await self.llm.ainvoke(messages)
             
             return {
                 "success": True,
-                "response": response,
+                "response": response.content,
                 "memory_used": len(conversation_history) if conversation_history else 0,
                 "error": None
             }
@@ -139,79 +95,112 @@ class LangChainService:
                 "error": str(e)
             }
     
-    def summarize_conversation(self, conversation_history: List[Dict[str, Any]]) -> str:
+    async def summarize_conversation(
+        self,
+        conversation_history: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
-        总结对话历史
+        对话总结
         
         :param conversation_history: 对话历史
-        :return: 对话总结
+        :return: 包含总结和元数据的字典
         """
-        if not conversation_history:
-            return "无对话历史"
-        
         try:
-            # 将对话历史转换为文本
+            if not self.llm:
+                return {
+                    "success": False,
+                    "summary": None,
+                    "message_count": len(conversation_history),
+                    "error": "LLM未初始化，请配置DEEPSEEK_API_KEY"
+                }
+            
+            # 构建对话文本
             conversation_text = "\n".join([
                 f"{msg.get('role', 'user')}: {msg.get('content', '')}"
                 for msg in conversation_history
             ])
             
-            # 使用LLM生成总结
-            if self.llm is None:
-                return "LLM未初始化，无法生成总结"
+            # 生成总结
+            messages = [
+                SystemMessage(content="你是一个对话总结专家。请用中文总结以下对话的主要内容。"),
+                HumanMessage(content=f"请总结以下对话：\n\n{conversation_text}")
+            ]
             
-            summary_prompt = f"""
-            请总结以下对话，提取关键信息：
+            response = await self.llm.ainvoke(messages)
             
-            {conversation_text}
-            
-            请提供简洁的总结，包括：
-            1. 对话主题
-            2. 主要讨论点
-            3. 用户需求
-            """
-            
-            summary = self.llm.predict(summary_prompt)
-            
-            return summary
+            return {
+                "success": True,
+                "summary": response.content,
+                "message_count": len(conversation_history),
+                "error": None
+            }
             
         except Exception as e:
-            return f"总结生成失败: {str(e)}"
+            return {
+                "success": False,
+                "summary": None,
+                "message_count": len(conversation_history),
+                "error": str(e)
+            }
     
-    def get_context_from_history(
+    async def get_context(
         self,
         conversation_history: List[Dict[str, Any]],
         max_context_length: int = 10
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
-        从对话历史中提取上下文
+        获取对话上下文
         
         :param conversation_history: 对话历史
         :param max_context_length: 最大上下文长度
-        :return: 上下文文本
+        :return: 包含上下文和元数据的字典
         """
-        if not conversation_history:
-            return ""
-        
-        # 获取最近的N条消息作为上下文
-        recent_messages = conversation_history[-max_context_length:]
-        
-        context_parts = []
-        for msg in recent_messages:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-            context_parts.append(f"{role}: {content}")
-        
-        return "\n".join(context_parts)
+        try:
+            # 获取最近的对话
+            recent_conversation = conversation_history[-max_context_length:]
+            
+            # 构建上下文文本
+            context_text = "\n".join([
+                f"{msg.get('role', 'user')}: {msg.get('content', '')}"
+                for msg in recent_conversation
+            ])
+            
+            return {
+                "success": True,
+                "context": context_text,
+                "message_count": len(recent_conversation),
+                "max_context_length": max_context_length,
+                "error": None
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "context": None,
+                "message_count": 0,
+                "max_context_length": max_context_length,
+                "error": str(e)
+            }
     
     def is_initialized(self) -> bool:
         """
-        检查服务是否已初始化
+        检查LangChain服务是否已初始化
         
         :return: 是否已初始化
         """
         return self.llm is not None
+    
+    def get_status(self) -> Dict[str, Any]:
+        """
+        获取LangChain服务状态
+        
+        :return: 服务状态信息
+        """
+        return {
+            "initialized": self.is_initialized(),
+            "message": "LangChain服务已初始化" if self.is_initialized() else "LangChain服务未初始化，请配置DEEPSEEK_API_KEY"
+        }
 
 
-# 全局LangChain服务实例
+# 创建全局LangChain服务实例
 langchain_service = LangChainService()
