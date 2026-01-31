@@ -12,6 +12,8 @@ import type {
 
 const API_BASE_URL = 'http://localhost:19088/api/v1'
 
+let isRedirecting = false
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -38,10 +40,13 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Error:', error)
     
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isRedirecting) {
       console.log('401 Unauthorized - clearing token and redirecting to login')
+      isRedirecting = true
+      
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      
       window.location.href = '/login'
     }
     
