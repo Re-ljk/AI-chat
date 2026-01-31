@@ -8,11 +8,13 @@
 
 import uuid
 from datetime import datetime
+from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 
 from app.common.core.result import AppApiException
 from app.models import AIConversation
 from app.schemas.conversation import ConversationCreate, MessageCreate
+from app.services.langchain_service import langchain_service
 
 
 def get_conversation(db: Session, conversation_id: str):
@@ -211,3 +213,58 @@ def get_red_conversations(db: Session, user_id: str, skip: int = 0, limit: int =
         AIConversation.user_id == user_id,
         AIConversation.is_active == True
     ).order_by(AIConversation.updated_at.desc()).offset(skip).limit(limit).all()
+
+
+def generate_ai_response_with_langchain(
+    conversation_history: List[Dict[str, Any]],
+    user_message: str
+) -> Dict[str, Any]:
+    """
+    使用LangChain生成AI回复（基于对话历史）
+    
+    :param conversation_history: 对话历史
+    :param user_message: 用户消息
+    :return: 包含AI回复和元数据的字典
+    """
+    return langchain_service.generate_response(
+        user_message=user_message,
+        conversation_history=conversation_history
+    )
+
+
+def summarize_conversation_with_langchain(
+    conversation_history: List[Dict[str, Any]]
+) -> str:
+    """
+    使用LangChain总结对话历史
+    
+    :param conversation_history: 对话历史
+    :return: 对话总结
+    """
+    return langchain_service.summarize_conversation(conversation_history)
+
+
+def get_conversation_context(
+    conversation_history: List[Dict[str, Any]],
+    max_context_length: int = 10
+) -> str:
+    """
+    从对话历史中提取上下文
+    
+    :param conversation_history: 对话历史
+    :param max_context_length: 最大上下文长度
+    :return: 上下文文本
+    """
+    return langchain_service.get_context_from_history(
+        conversation_history=conversation_history,
+        max_context_length=max_context_length
+    )
+
+
+def is_langchain_initialized() -> bool:
+    """
+    检查LangChain服务是否已初始化
+    
+    :return: 是否已初始化
+    """
+    return langchain_service.is_initialized()

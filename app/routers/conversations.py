@@ -13,7 +13,7 @@ import json
 
 from app.database.base import get_db
 from app.schemas.conversation import ConversationCreate, ConversationResponse, ConversationDetailResponse, MessageCreate, StreamMessageCreate
-from app.services.conversation_service import get_conversation, get_conversations, create_conversation, delete_conversation, add_message, get_messages, add_stream_message, save_stream_message, get_red_conversations
+from app.services.conversation_service import get_conversation, get_conversations, create_conversation, delete_conversation, add_message, get_messages, add_stream_message, save_stream_message, get_red_conversations, generate_ai_response_with_langchain, summarize_conversation_with_langchain, get_conversation_context, is_langchain_initialized
 from app.common.core.result import Result, AppApiException
 from app.models.user import User
 from app.services.auth_service import get_current_user
@@ -45,18 +45,17 @@ def delete_conversation_endpoint(
     return Result.success(delete_conversation(db=db, conversation_id=conversation_id, user_id=current_user.id)).to_dict()
 
 
-@router.get("/")
-def get_conversations_endpoint(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
+@router.get("/langchain/status")
+def get_langchain_status_endpoint(
     current_user: User = Depends(get_current_user)
 ):
     """
-    获取对话列表
+    获取LangChain服务状态
     """
-    conversations = get_conversations(db=db, user_id=current_user.id, skip=skip, limit=limit)
-    return Result.success(conversations).to_dict()
+    return Result.success({
+        "initialized": is_langchain_initialized(),
+        "message": "LangChain服务已初始化" if is_langchain_initialized() else "LangChain服务未初始化，请检查API密钥配置"
+    }).to_dict()
 
 
 @router.get("/red")
@@ -70,6 +69,20 @@ def get_red_conversations_endpoint(
     获取红对话列表（多轮会话）
     """
     conversations = get_red_conversations(db=db, user_id=current_user.id, skip=skip, limit=limit)
+    return Result.success(conversations).to_dict()
+
+
+@router.get("/")
+def get_conversations_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取对话列表
+    """
+    conversations = get_conversations(db=db, user_id=current_user.id, skip=skip, limit=limit)
     return Result.success(conversations).to_dict()
 
 
@@ -159,3 +172,106 @@ def save_stream_message_endpoint(
     保存流式消息到数据库
     """
     return Result.success(save_stream_message(db=db, conversation_id=conversation_id, user_id=current_user.id, message=message)).to_dict()
+
+
+@router.post("/{conversation_id}/ai-response")
+async def generate_ai_response_endpoint(
+    conversation_id: str,
+    message_create: MessageCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    使用LangChain生成AI回复（基于对话历史）
+    """
+    conversation = get_conversation(db=db, conversation_id=conversation_id)
+    if not conversation:
+        raise AppApiException(404, "对话不存在")
+    
+    if conversation.user_id != current_user.id:
+        raise AppApiException(403, "没有权限查看其他用户的对话")
+    
+    conversation_history = conversation.content or []
+    
+    result = await generate_ai_response_with_langchain(
+        conversation_history=conversation_history,
+        user_message=message_create.content
+    )
+    
+    if result["success"]:
+        return Result.success({
+            "response": result["response"],
+            "memory_used": result["memory_used"]
+        }).to_dict()
+    else:
+        raise AppApiException(500, f"AI回复生成失败: {result['error']}")
+
+
+@router.get("/{conversation_id}/summary")
+def get_conversation_summary_endpoint(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取对话总结（使用LangChain）
+    """
+    conversation = get_conversation(db=db, conversation_id=conversation_id)
+    if not conversation:
+        raise AppApiException(404, "对话不存在")
+    
+    if conversation.user_id != current_user.id:
+        raise AppApiException(403, "没有权限查看其他用户的对话")
+    
+    conversation_history = conversation.content or []
+    
+    summary = summarize_conversation_with_langchain(conversation_history=conversation_history)
+    
+    return Result.success({
+        "summary": summary,
+        "message_count": len(conversation_history)
+    }).to_dict()
+
+
+@router.get("/{conversation_id}/context")
+def get_conversation_context_endpoint(
+    conversation_id: str,
+    max_context_length: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取对话上下文（使用LangChain）
+    """
+    conversation = get_conversation(db=db, conversation_id=conversation_id)
+    if not conversation:
+        raise AppApiException(404, "对话不存在")
+    
+    if conversation.user_id != current_user.id:
+        raise AppApiException(403, "没有权限查看其他用户的对话")
+    
+    conversation_history = conversation.content or []
+    
+    context = get_conversation_context(
+        conversation_history=conversation_history,
+        max_context_length=max_context_length
+    )
+    
+    return Result.success({
+        "context": context,
+        "message_count": len(conversation_history),
+        "max_context_length": max_context_length
+    }).to_dict()
+
+
+@router.get("/langchain/status")
+def get_langchain_status_endpoint(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取LangChain服务状态
+    """
+    return Result.success({
+        "initialized": is_langchain_initialized(),
+        "message": "LangChain服务已初始化" if is_langchain_initialized() else "LangChain服务未初始化，请检查API密钥配置"
+    }).to_dict()
