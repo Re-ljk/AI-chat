@@ -208,7 +208,8 @@ def add_stream_message(db: Session, conversation_id: str, user_id: str, message_
     flag_modified(db_conversation, "content")
     db.commit()
     db.refresh(db_conversation)
-    return db_conversation
+    
+    return message
 
 
 def save_stream_message(db: Session, conversation_id: str, user_id: str, message: dict):
