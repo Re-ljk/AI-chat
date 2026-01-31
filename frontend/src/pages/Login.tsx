@@ -35,7 +35,11 @@ function Login() {
       message.success('登录成功')
       
       console.log('Navigating to /chat...')
-      navigate('/chat', { replace: true })
+      
+      setTimeout(() => {
+        console.log('After timeout - navigating to /chat')
+        navigate('/chat', { replace: true })
+      }, 100)
     } catch (error: any) {
       console.error('Login error:', error)
       message.error(error.response?.data?.message || '登录失败，请检查用户名和密码')
