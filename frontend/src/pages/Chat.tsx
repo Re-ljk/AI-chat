@@ -68,8 +68,10 @@ function Chat() {
 
   useEffect(() => {
     loadConversations()
-    checkLangChainStatus()
-  }, [])
+    if (user) {
+      checkLangChainStatus()
+    }
+  }, [user])
 
   useEffect(() => {
     scrollToBottom()

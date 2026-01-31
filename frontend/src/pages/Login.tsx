@@ -34,7 +34,7 @@ function Login() {
       
       message.success('登录成功')
       
-      window.location.href = '/chat'
+      navigate('/chat')
     } catch (error: any) {
       console.error('Login error:', error)
       message.error(error.response?.data?.message || '登录失败，请检查用户名和密码')
