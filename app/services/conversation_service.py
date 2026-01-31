@@ -167,13 +167,15 @@ def get_messages(db: Session, conversation_id: str, user_id: str):
 
 def add_stream_message(db: Session, conversation_id: str, user_id: str, message_create: dict):
     """
-    向对话添加流式消息（不立即保存到数据库）
+    向对话添加流式消息（立即保存到数据库）
     :param db: 数据库会话
     :param conversation_id: 对话ID
     :param user_id: 用户ID
     :param message_create: 消息创建数据
     :return: 消息对象或错误信息
     """
+    from sqlalchemy.orm.attributes import flag_modified
+    
     db_conversation = get_conversation(db, conversation_id)
     if not db_conversation:
         return {
@@ -199,7 +201,14 @@ def add_stream_message(db: Session, conversation_id: str, user_id: str, message_
         "timestamp": datetime.utcnow().isoformat()
     }
     
-    return message
+    if db_conversation.content is None:
+        db_conversation.content = []
+    
+    db_conversation.content.append(message)
+    flag_modified(db_conversation, "content")
+    db.commit()
+    db.refresh(db_conversation)
+    return db_conversation
 
 
 def save_stream_message(db: Session, conversation_id: str, user_id: str, message: dict):
