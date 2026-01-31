@@ -34,7 +34,8 @@ function Login() {
       
       message.success('登录成功')
       
-      navigate('/chat')
+      console.log('Navigating to /chat...')
+      navigate('/chat', { replace: true })
     } catch (error: any) {
       console.error('Login error:', error)
       message.error(error.response?.data?.message || '登录失败，请检查用户名和密码')
