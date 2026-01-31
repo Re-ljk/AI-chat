@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 7  # 7天
 
     # DeepSeek API 配置
-    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_API_KEY: str = "sk-34cb02de162f4804b08962a7cb58889e"
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com/v1"
     DEEPSEEK_MODEL: str = "deepseek-chat"
 
