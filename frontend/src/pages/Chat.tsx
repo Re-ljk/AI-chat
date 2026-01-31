@@ -182,7 +182,7 @@ function Chat() {
       timestamp: new Date().toISOString()
     }
 
-    setMessages([...messages, userMessage])
+    setMessages(prev => [...prev, userMessage])
     setInputValue('')
     setStreaming(true)
     setStreamResponse('')
@@ -207,7 +207,7 @@ function Chat() {
             }
             
             conversationApi.saveStreamMessage(currentConversation.id, assistantMessage)
-            setMessages([...messages, userMessage, assistantMessage])
+            setMessages(prev => [...prev, assistantMessage])
             setStreamResponse('')
             showNotification('AI回复', 'AI已生成回复')
           } else if (data.type === 'error') {
