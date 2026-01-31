@@ -2,7 +2,7 @@
 
 ### 登录页面
 
-![image-20260131164710796](C:\Users\ljk\Desktop\GitLab\assets\image-20260131164710796.png)
+![image-20260131164710796](./assets\image-20260131164710796.png)
 
 简洁现代的登录界面，支持用户名和密码登录，集成JWT认证。
 
