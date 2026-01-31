@@ -40,6 +40,25 @@
 ├── requirements.txt
 ├── .env                      # 配置项
 ├── alembic.ini
+├── frontend/                 # 前端项目（React + TypeScript + Vite）
+│   ├── src/
+│   │   ├── pages/          # 页面组件
+│   │   │   ├── Login.tsx
+│   │   │   ├── Register.tsx
+│   │   │   └── Chat.tsx
+│   │   ├── services/        # API服务
+│   │   │   └── api.ts
+│   │   ├── hooks/          # 自定义Hooks
+│   │   │   └── useAuth.ts
+│   │   ├── types/          # TypeScript类型定义
+│   │   │   └── index.ts
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   └── index.html
 └── README.md
 ```
 
@@ -72,6 +91,17 @@
 - AI智能回复生成
 - 对话总结功能
 - 对话上下文管理
+
+## 4. 前端页面
+- React + TypeScript + Vite 项目结构
+- 登录和注册页面
+- 对话管理页面
+- 流式响应展示
+- 多轮对话界面
+- 对接后端API
+- 仿照kimiUI设计风格
+- LangChain功能集成（对话总结、上下文）
+- 响应式布局
 
 # 创建数据库
 ```sql
