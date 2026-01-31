@@ -192,8 +192,6 @@ async def stream_message_endpoint(
                             "content": chunk
                         }
                     }).encode('utf-8') + b'\n\n'
-                    import asyncio
-                    await asyncio.sleep(0.1)
                 
                 yield json.dumps({
                     "type": "done",
