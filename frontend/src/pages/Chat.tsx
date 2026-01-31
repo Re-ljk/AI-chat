@@ -263,23 +263,6 @@ function Chat() {
     setSearchResults(results)
   }
 
-  const highlightText = (text: string, highlight: string) => {
-    if (!highlight.trim()) return text
-    
-    const regex = new RegExp(`(${highlight})`, 'gi')
-    const parts = text.split(regex)
-    
-    return parts.map((part, index) => 
-      regex.test(part) ? (
-        <span key={index} style={{ background: '#ffeb3b', padding: '0 2px', borderRadius: '2px' }}>
-          {part}
-        </span>
-      ) : (
-        part
-      )
-    )
-  }
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
     message.success('已复制到剪贴板')
@@ -743,9 +726,7 @@ function Chat() {
                               }
                             }}
                           >
-                            {messageSearchText && searchResults.includes(index) 
-                              ? highlightText(msg.content, messageSearchText)
-                              : msg.content}
+                            {msg.content}
                           </ReactMarkdown>
                         ) : (
                           <Paragraph style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
