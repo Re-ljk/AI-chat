@@ -38,3 +38,9 @@ temp/
 
 # Test documentation
 测试过程文档(测试样例以及截图)/
+
+# Test files
+test/
+
+# Requirements documentation
+需求完成情况.md
