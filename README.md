@@ -32,6 +32,8 @@
 - ✅ 对话导出
 - ✅ 键盘快捷键
 - ✅ 响应式设计
+- ✅ 文档解析（Word、Excel、PDF）
+- ✅ 文档分段（递归字符、Markdown标题、代码语法）
 
 ## 项目结构
 
@@ -70,7 +72,14 @@
 │   │   ├── auth_service.py   # 认证服务
 │   │   ├── session_service.py  # 会话管理服务
 │   │   ├── conversation_service.py  # AI对话管理服务
-│   │   └── langchain_service.py   # LangChain服务
+│   │   ├── langchain_service.py   # LangChain服务
+│   │   ├── document_parsers/       # 文档解析器
+│   │   │   ├── __init__.py
+│   │   │   ├── base_parser.py      # 文档解析基类
+│   │   │   ├── word_parser.py      # Word文档解析器
+│   │   │   ├── excel_parser.py     # Excel文档解析器
+│   │   │   └── text_splitter.py    # 文本分段器
+│   │   └── document_parser_service.py  # 文档解析服务
 │   └── __init__.py
 ├── main.py                   # 主应用入口
 ├── config.py                 # 配置类
@@ -131,6 +140,16 @@
 - 对话总结功能
 - 对话上下文管理
 - 对话更新（标题修改、置顶等）
+
+#### 4. 文档解析
+- Word文档解析（.docx, .doc）
+- Excel文档解析（.xlsx, .xls, .csv）
+- PDF文档解析（.pdf）
+- 文档元数据提取
+- 递归字符分段
+- Markdown标题分段
+- 代码语法分段（Python/JS）
+- 文档解析和分段一体化接口
 
 ### 前端功能
 
@@ -344,6 +363,59 @@ npm run dev
 - 点击消息的复制图标可以复制消息内容
 - 点击重新生成按钮可以重新生成AI回复
 - 点击停止按钮可以停止正在生成的回复
+
+### 7. 文档解析
+
+#### 7.1 解析Word文档
+
+```python
+from app.services.document_parser_service import document_parser_service
+
+result = document_parser_service.parse_document('test.docx')
+print(result['content'])
+print(result['metadata'])
+```
+
+#### 7.2 解析Excel文档
+
+```python
+result = document_parser_service.parse_document('test.xlsx')
+print(result['content'])
+print(result['metadata'])
+```
+
+#### 7.3 文本分段
+
+```python
+chunks = document_parser_service.split_document(
+    text,
+    metadata={'source': 'test.txt'},
+    split_method='recursive_char',
+    chunk_size=1000,
+    chunk_overlap=200
+)
+```
+
+#### 7.4 解析并分段
+
+```python
+result = document_parser_service.parse_and_split(
+    'test.docx',
+    split_method='recursive_char',
+    chunk_size=1000,
+    chunk_overlap=200
+)
+```
+
+#### 7.5 运行文档解析测试
+
+```bash
+# 创建测试文档
+python create_test_documents.py
+
+# 运行测试
+python test_document_parser.py
+```
 
 ## API文档
 
