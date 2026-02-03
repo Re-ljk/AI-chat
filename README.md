@@ -23,7 +23,7 @@
 - 设置面板（主题切换、字体大小调整）
 
 ### 核心功能
-<<<<<<< HEAD
+
 - ✅ 多轮对话支持
 - ✅ 流式AI回复
 - ✅ LangChain集成（对话历史学习）
@@ -35,18 +35,10 @@
 - ✅ 响应式设计
 - ✅ 文档解析（Word、Excel、PDF）
 - ✅ 文档分段（递归字符、Markdown标题、代码语法）
-- ✅ 图片提取（Word、Excel、PDF文档中的图片）
-- ✅ Unstructured集成解析
+- ✅ 图片提取（Word、Excel文档中的图片）
 
-- ✅ 多轮对话支持  
-- ✅ 流式 AI 回复  
-- ✅ LangChain 集成（对话历史学习）  
-- ✅ DeepSeek API 集成  
-- ✅ 对话总结与上下文管理  
-- ✅ 消息搜索与关键词高亮  
-- ✅ 对话导出  
-- ✅ 键盘快捷键支持  
-- ✅ 响应式设计，适配多端设备
+### 项目结构
+
 ```shell
 ├── alembic/                  # 数据库迁移
 │   ├── versions/
@@ -88,6 +80,8 @@
 │   │   │   ├── base_parser.py      # 文档解析基类
 │   │   │   ├── word_parser.py      # Word文档解析器
 │   │   │   ├── excel_parser.py     # Excel文档解析器
+│   │   │   ├── pdf_parser.py       # PDF文档解析器
+│   │   │   ├── unstructured_parser.py  # Unstructured集成解析器
 │   │   │   └── text_splitter.py    # 文本分段器
 │   │   └── document_parser_service.py  # 文档解析服务
 │   └── __init__.py
@@ -117,10 +111,6 @@
 │   └── index.html
 └── README.md
 ```
-
-### 使用与交流
-
-如果你对本项目感兴趣，但是在**本地配置 / 部署过程中遇到问题**，欢迎通过邮件与我联系：
 
 ### 后端功能
 
@@ -157,12 +147,13 @@
 - Word文档解析（.docx, .doc）
 - Excel文档解析（.xlsx, .xls, .csv）
 - PDF文档解析（.pdf）
+- Unstructured集成解析
 - 文档元数据提取
 - 递归字符分段
 - Markdown标题分段
 - 代码语法分段（Python/JS）
 - 文档解析和分段一体化接口
-- 图片提取（Word、Excel文档中的图片，Base64编码）
+- 图片提取（Word、Excel、PDF文档中的图片，Base64编码）
 
 ### 前端功能
 
@@ -246,12 +237,16 @@ pip install -r requirements.txt
 
 ```env
 # 数据库配置
-DATABASE_URL=postgresql://username:password@localhost:5432/baoxian_test01
+PG_HOST=47.108.29.156
+PG_PORT=25432
+PG_USER=baoxian_test
+PG_PASSWORD=baoxian@123
+PG_DB=baoxian_test01
 
 # JWT配置
-SECRET_KEY=your-secret-key-here
+SECRET_KEY=change_me_to_a_long_random_string
 ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+ACCESS_TOKEN_EXPIRE_MINUTES=300
 
 # DeepSeek API配置
 DEEPSEEK_API_KEY=your-deepseek-api-key
@@ -297,7 +292,7 @@ npm install
 编辑 `frontend/src/services/api.ts`，确保API地址正确：
 
 ```typescript
-const API_BASE_URL = 'http://localhost:19088/api/v1'
+const API_BASE_URL = 'http://localhost:8000/api/v1'
 ```
 
 ## 运行步骤
@@ -313,10 +308,10 @@ venv\Scripts\activate  # Windows
 source venv/bin/activate  # Linux/Mac
 
 # 启动FastAPI服务器
-python -m uvicorn main:app --host 0.0.0.0 --port 19088 --reload
+python main.py
 ```
 
-后端服务将在 `http://localhost:19088` 启动
+后端服务将在 `http://0.0.0.0:8000` 启动
 
 ### 2. 启动前端服务
 
@@ -397,7 +392,23 @@ print(result['content'])
 print(result['metadata'])
 ```
 
-#### 7.3 文本分段
+#### 7.3 解析PDF文档
+
+```python
+result = document_parser_service.parse_document('test.pdf')
+print(result['content'])
+print(result['metadata'])
+```
+
+#### 7.4 使用Unstructured解析
+
+```python
+result = document_parser_service.parse_document('test.docx')
+print(result['content'])
+print(result['metadata'])
+```
+
+#### 7.5 文本分段
 
 ```python
 chunks = document_parser_service.split_document(
@@ -409,7 +420,7 @@ chunks = document_parser_service.split_document(
 )
 ```
 
-#### 7.4 解析并分段
+#### 7.6 解析并分段
 
 ```python
 result = document_parser_service.parse_and_split(
@@ -420,17 +431,7 @@ result = document_parser_service.parse_and_split(
 )
 ```
 
-#### 7.5 运行文档解析测试
-
-```bash
-# 创建测试文档
-python create_test_documents.py
-
-# 运行测试
-python test_document_parser.py
-```
-
-#### 7.6 提取文档中的图片
+#### 7.7 提取文档中的图片
 
 ```python
 from app.services.document_parser_service import document_parser_service
@@ -455,18 +456,12 @@ if result['success']:
                 f.write(image_data)
 ```
 
-#### 7.7 运行图片提取测试
-
-```bash
-python test_image_extraction.py
-```
-
 ## API文档
 
 启动后端服务后，访问以下地址查看API文档：
 
-- Swagger UI: `http://localhost:19088/docs`
-- ReDoc: `http://localhost:19088/redoc`
+- Swagger UI: `http://0.0.0.0:8000/api/v1/docs`
+- ReDoc: `http://0.0.0.0:8000/api/v1/redoc`
 
 ## 技术栈
 
@@ -478,6 +473,7 @@ python test_image_extraction.py
 - Pydantic - 数据验证
 - LangChain - AI对话管理
 - DeepSeek API - AI模型
+- Unstructured - 文档解析
 
 ### 前端
 - React - UI框架
@@ -489,6 +485,3 @@ python test_image_extraction.py
 - React Markdown - Markdown渲染
 - React Syntax Highlighter - 代码高亮
 - Emoji Picker React - 表情选择器
-
-📧 **jiangkuanli@163.com**
-

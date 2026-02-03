@@ -1,13 +1,12 @@
 """
-    @project: aihub
-    @Author: jiangkuanli
-    @file: config
-    @date: 2026/1/19 14:16
-    @desc:
+@project: aihub
+@file: config
+@desc: application settings
 """
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import AnyUrl, Field
+from urllib.parse import quote_plus
 
 
 class Settings(BaseSettings):
@@ -31,9 +30,13 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # PostgreSQL URL
-    DB_URL: AnyUrl = Field(..., env="DB_URL")
     DB_POOL_SIZE: int = 200
     DB_MAX_OVERFLOW: int = 100
+
+    @property
+    def DB_URL(self) -> str:
+        encoded_password = quote_plus(self.PG_PASSWORD)
+        return f"postgresql://{self.PG_USER}:{encoded_password}@{self.PG_HOST}:{self.PG_PORT}/{self.PG_DB}"
 
     # JWT 配置
     SECRET_KEY: str = Field(..., env="SECRET_KEY")
