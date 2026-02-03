@@ -1,6 +1,6 @@
 """
     @project: aihub
-    @Author: dongrunhua
+    @Author: jiangkuanli
     @file: config
     @date: 2026/1/19 14:16
     @desc:

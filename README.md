@@ -34,6 +34,7 @@
 - ✅ 响应式设计
 - ✅ 文档解析（Word、Excel、PDF）
 - ✅ 文档分段（递归字符、Markdown标题、代码语法）
+- ✅ 图片提取（Word、Excel文档中的图片）
 
 ## 项目结构
 
@@ -150,6 +151,7 @@
 - Markdown标题分段
 - 代码语法分段（Python/JS）
 - 文档解析和分段一体化接口
+- 图片提取（Word、Excel文档中的图片，Base64编码）
 
 ### 前端功能
 
@@ -415,6 +417,37 @@ python create_test_documents.py
 
 # 运行测试
 python test_document_parser.py
+```
+
+#### 7.6 提取文档中的图片
+
+```python
+from app.services.document_parser_service import document_parser_service
+import base64
+
+result = document_parser_service.parse_document('test.docx')
+
+if result['success']:
+    # 检查是否包含图片
+    if result['metadata'].get('has_images', False):
+        print(f"文档包含 {result['metadata'].get('image_count', 0)} 张图片")
+        
+        # 遍历所有图片
+        for img in result['images']:
+            print(f"图片 {img['index']}:")
+            print(f"  - 扩展名: {img['extension']}")
+            print(f"  - 大小: {img['size']} bytes")
+            
+            # 保存图片到文件
+            image_data = base64.b64decode(img['data'])
+            with open(f"image_{img['index']}.{img['extension']}", 'wb') as f:
+                f.write(image_data)
+```
+
+#### 7.7 运行图片提取测试
+
+```bash
+python test_image_extraction.py
 ```
 
 ## API文档
