@@ -41,6 +41,9 @@ temp/
 
 # Test files
 test/
+test_*.py
+create_test_documents.py
+2026-*.md
 
 # Requirements documentation
 需求完成情况.md
