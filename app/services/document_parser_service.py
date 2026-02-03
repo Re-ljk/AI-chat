@@ -13,6 +13,8 @@ import os
 from .document_parsers.base_parser import BaseDocumentParser
 from .document_parsers.word_parser import WordParser
 from .document_parsers.excel_parser import ExcelParser
+from .document_parsers.pdf_parser import PDFParser
+from .document_parsers.unstructured_parser import UnstructuredParser
 from .document_parsers.text_splitter import (
     RecursiveCharacterSplitter,
     MarkdownHeaderSplitter,
@@ -28,7 +30,9 @@ class DocumentParserService:
         """初始化文档解析服务"""
         self.parsers: Dict[str, BaseDocumentParser] = {
             'word': WordParser(),
-            'excel': ExcelParser()
+            'excel': ExcelParser(),
+            'pdf': PDFParser(),
+            'unstructured': UnstructuredParser()
         }
         
         self.splitters: Dict[str, BaseTextSplitter] = {
