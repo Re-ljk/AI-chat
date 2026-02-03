@@ -35,23 +35,18 @@
 - ✅ 响应式设计
 - ✅ 文档解析（Word、Excel、PDF）
 - ✅ 文档分段（递归字符、Markdown标题、代码语法）
-- ✅ 图片提取（Word、Excel文档中的图片）
-=======
->>>>>>> 54fb52fa75139a6a2eb2e3325a3ba11f1fc7c424
+- ✅ 图片提取（Word、Excel、PDF文档中的图片）
+- ✅ Unstructured集成解析
 
-- ✅ 多轮对话支持
-- ✅ 流式AI回复
-- ✅ LangChain集成（对话历史学习）
-- ✅ DeepSeek API集成
-- ✅ 对话总结和上下文管理
-- ✅ 消息搜索和高亮
-- ✅ 对话导出
-- ✅ 键盘快捷键
-- ✅ 响应式设计
-- ✅ 文档解析（Word、Excel、PDF）
-- ✅ 文档分段（递归字符、Markdown标题、代码语法）
-- ✅ 图片提取（Word、Excel文档中的图片）
-
+- ✅ 多轮对话支持  
+- ✅ 流式 AI 回复  
+- ✅ LangChain 集成（对话历史学习）  
+- ✅ DeepSeek API 集成  
+- ✅ 对话总结与上下文管理  
+- ✅ 消息搜索与关键词高亮  
+- ✅ 对话导出  
+- ✅ 键盘快捷键支持  
+- ✅ 响应式设计，适配多端设备
 ```shell
 ├── alembic/                  # 数据库迁移
 │   ├── versions/
@@ -93,8 +88,6 @@
 │   │   │   ├── base_parser.py      # 文档解析基类
 │   │   │   ├── word_parser.py      # Word文档解析器
 │   │   │   ├── excel_parser.py     # Excel文档解析器
-│   │   │   ├── pdf_parser.py       # PDF文档解析器
-│   │   │   ├── unstructured_parser.py  # Unstructured解析器
 │   │   │   └── text_splitter.py    # 文本分段器
 │   │   └── document_parser_service.py  # 文档解析服务
 │   └── __init__.py
@@ -124,6 +117,10 @@
 │   └── index.html
 └── README.md
 ```
+
+### 使用与交流
+
+如果你对本项目感兴趣，但是在**本地配置 / 部署过程中遇到问题**，欢迎通过邮件与我联系：
 
 ### 后端功能
 
@@ -492,4 +489,6 @@ python test_image_extraction.py
 - React Markdown - Markdown渲染
 - React Syntax Highlighter - 代码高亮
 - Emoji Picker React - 表情选择器
+
+📧 **jiangkuanli@163.com**
 
