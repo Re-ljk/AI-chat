@@ -8,5 +8,6 @@
 from .user import User
 from .session import Session
 from .conversation import AIConversation
+from .document import Document, Paragraph
 
-__all__ = ["User", "Session", "AIConversation"]
+__all__ = ["User", "Session", "AIConversation", "Document", "Paragraph"]

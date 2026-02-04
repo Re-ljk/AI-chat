@@ -6,8 +6,14 @@
     @desc: Unstructured集成解析器
 """
 
+import os
 from typing import Dict, Any, List
 from .base_parser import BaseDocumentParser
+
+# 设置NLTK数据目录到项目目录，避免权限问题
+NLTK_DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'nltk_data')
+os.makedirs(NLTK_DATA_DIR, exist_ok=True)
+os.environ['NLTK_DATA'] = NLTK_DATA_DIR
 
 
 class UnstructuredParser(BaseDocumentParser):
