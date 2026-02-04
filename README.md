@@ -36,13 +36,18 @@
 - ✅ 响应式设计
 - ✅ 文档解析（Word、Excel、PDF）
 - ✅ 文档分段（递归字符、Markdown标题、代码语法）
-- ✅ 图片提取（Word、Excel文档中的图片）
+- ✅ 图片提取（Word、Excel、PDF文档中的图片）
+- ✅ 文档上传和管理
+- ✅ 文档自动分段和存储
+- ✅ 段落查询和管理
+- ✅ 文档状态跟踪
 
 ## 项目结构
 
 ```shell
 ├── alembic/                  # 数据库迁移
 │   ├── versions/
+│   │   └── add_document_tables.py  # 文档表迁移脚本
 │   ├── env.py
 │   └── script.py.mako
 ├── app/
@@ -52,34 +57,41 @@
 │   │   ├── user.py
 │   │   ├── session.py
 │   │   ├── conversation.py
-│   │   └── document.py
+│   │   └── document.py       # 文档和段落模型
 │   ├── routers/               # API路由
 │   │   ├── api_v1.py
 │   │   ├── users.py
 │   │   ├── auth.py
 │   │   ├── sessions.py
 │   │   ├── conversations.py
-│   │   └── documents.py
+│   │   └── documents.py      # 文档管理API
 │   ├── schemas/              # 数据模型定义
 │   │   ├── token.py
 │   │   ├── user.py
 │   │   ├── session.py
 │   │   ├── conversation.py
-│   │   └── document.py
+│   │   └── document.py       # 文档相关Schema
 │   ├── services/             # 业务逻辑实现
 │   │   ├── user_service.py
 │   │   ├── auth_service.py
 │   │   ├── session_service.py
 │   │   ├── conversation_service.py
 │   │   ├── langchain_service.py
-│   │   ├── document_service.py
-│   │   ├── document_parsers/  # 文档解析器
+│   │   ├── document_service.py      # 文档服务
+│   │   ├── document_parsers/         # 文档解析器
+│   │   │   └── unstructured_parser.py
 │   │   └── document_parser_service.py
 │   └── __init__.py
+├── test_2.4-2.5/            # 测试脚本
+│   ├── show_table_structure.py
+│   └── test_document_api.py
+├── uploads/                  # 上传文件存储目录
+├── nltk_data/               # NLTK数据目录
 ├── main.py                   # 主应用入口
 ├── config.py                 # 配置类
 ├── requirements.txt
 ├── .env
+├── .gitignore
 ├── alembic.ini
 ├── frontend/                 # 前端项目（React + TypeScript + Vite）
 │   ├── src/
@@ -146,13 +158,16 @@
 - 图片提取（Word、Excel、PDF文档中的图片，Base64编码）
 
 ### 5. 文档管理
-- 文档上传接口
-- 文档列表查询
+- 文档上传（支持多种格式：.txt, .docx, .doc, .xlsx, .xls, .csv, .pdf）
+- 文档列表查询（分页、筛选）
 - 文档详情查询
-- 文档更新和删除
-- 段落管理
-- 文档状态跟踪
+- 文档更新（状态、标题等）
+- 文档删除
+- 段落管理（查询、统计）
+- 文档状态跟踪（processing/completed/failed/archived）
+- 自动文档解析和分段
 - 错误处理和日志记录
+- 文件存储管理
 
 ## 前端功能
 
@@ -196,6 +211,8 @@
 - 文档详情查看
 - 段落管理
 - 文档状态显示
+- 文档搜索和筛选
+- 文档删除和归档
 
 ## 启动步骤
 
