@@ -19,7 +19,7 @@ app.log
 coverage/
 
 # Environment
-.env
+# .env
 .env.local
 .env.*.local
 
