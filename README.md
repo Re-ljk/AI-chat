@@ -231,8 +231,6 @@
 
 ### 1. 启动MinIO服务
 
-**MinIO是文档存储的核心组件，必须首先启动**
-
 #### MinIO启动方式：
 **使用本地MinIO服务**
 - 下载并安装MinIO：https://min.io/download
