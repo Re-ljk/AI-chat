@@ -7,8 +7,34 @@
 """
 
 import os
+import sys
 import requests
 import json
+from pathlib import Path
+
+# 配置日志
+class Tee:
+    """同时输出到控制台和文件"""
+    def __init__(self, file_path):
+        self.file = open(file_path, 'w', encoding='utf-8')
+        self.stdout = sys.stdout
+        sys.stdout = self
+    
+    def write(self, data):
+        self.stdout.write(data)
+        self.file.write(data)
+    
+    def flush(self):
+        self.stdout.flush()
+        self.file.flush()
+    
+    def close(self):
+        sys.stdout = self.stdout
+        self.file.close()
+
+# 创建日志文件
+log_file = Path(__file__).parent / "document_api_test_log.txt"
+logger = Tee(log_file)
 
 BASE_URL = "http://localhost:8000/api/v1"
 
@@ -205,4 +231,9 @@ def test_document_api():
 
 
 if __name__ == "__main__":
-    test_document_api()
+    try:
+        test_document_api()
+    finally:
+        # 关闭日志
+        logger.close()
+        print(f"\n日志已保存到: {log_file}")

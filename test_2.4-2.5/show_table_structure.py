@@ -7,11 +7,36 @@
 """
 
 import sys
+import os
 from pathlib import Path
 
 # 添加项目根目录到 Python 路径，确保可以导入 app 模块
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
+
+# 配置日志
+class Tee:
+    """同时输出到控制台和文件"""
+    def __init__(self, file_path):
+        self.file = open(file_path, 'w', encoding='utf-8')
+        self.stdout = sys.stdout
+        sys.stdout = self
+    
+    def write(self, data):
+        self.stdout.write(data)
+        self.file.write(data)
+    
+    def flush(self):
+        self.stdout.flush()
+        self.file.flush()
+    
+    def close(self):
+        sys.stdout = self.stdout
+        self.file.close()
+
+# 创建日志文件
+log_file = Path(__file__).parent / "table_structure_log.txt"
+logger = Tee(log_file)
 
 from sqlalchemy import inspect
 from app.database.base import engine, get_db
@@ -137,14 +162,19 @@ def show_document_table_detail():
 
 
 if __name__ == "__main__":
-    show_table_structure()
-    show_model_info()
-    show_document_table_detail()
-    
-    print("\n" + "=" * 80)
-    print("第3天任务验证：文档数据模型设计")
-    print("=" * 80)
-    print("✅ Document表结构已实现")
-    print("✅ Paragraph表结构已实现")
-    print("✅ 表关系已正确配置")
-    print("=" * 80)
+    try:
+        show_table_structure()
+        show_model_info()
+        show_document_table_detail()
+        
+        print("\n" + "=" * 80)
+        print("第3天任务验证：文档数据模型设计")
+        print("=" * 80)
+        print("✅ Document表结构已实现")
+        print("✅ Paragraph表结构已实现")
+        print("✅ 表关系已正确配置")
+        print("=" * 80)
+    finally:
+        # 关闭日志
+        logger.close()
+        print(f"\n日志已保存到: {log_file}")

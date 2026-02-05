@@ -1,0 +1,206 @@
+================================================================================
+数据库表结构展示（Document 和 Paragraph）
+================================================================================
+
+展示 2 个表：
+  documents, paragraphs
+
+================================================================================
+表名: documents
+================================================================================
+
+字段信息（共 16 个字段）：
+--------------------------------------------------------------------------------
+1. id
+   类型: VARCHAR
+   属性: 非空
+
+2. user_id
+   类型: VARCHAR
+   属性: 非空
+
+3. filename
+   类型: VARCHAR
+   属性: 非空
+
+4. file_path
+   类型: VARCHAR
+   属性: 非空
+
+5. file_size
+   类型: INTEGER
+   属性: 非空
+
+6. file_type
+   类型: VARCHAR
+   属性: 非空
+
+7. content_type
+   类型: VARCHAR
+   属性: 可空
+
+8. total_paragraphs
+   类型: INTEGER
+   属性: 可空, 默认: 0
+
+9. chunk_size
+   类型: INTEGER
+   属性: 可空
+
+10. chunk_overlap
+   类型: INTEGER
+   属性: 可空
+
+11. splitter_type
+   类型: VARCHAR
+   属性: 可空
+
+12. status
+   类型: VARCHAR
+   属性: 可空, 默认: 'processing'::character varying
+
+13. error_message
+   类型: TEXT
+   属性: 可空
+
+14. is_active
+   类型: BOOLEAN
+   属性: 可空, 默认: true
+
+15. created_at
+   类型: TIMESTAMP
+   属性: 可空, 默认: now()
+
+16. updated_at
+   类型: TIMESTAMP
+   属性: 可空
+
+主键: 
+
+================================================================================
+表名: paragraphs
+================================================================================
+
+字段信息（共 7 个字段）：
+--------------------------------------------------------------------------------
+1. id
+   类型: VARCHAR
+   属性: 非空
+
+2. document_id
+   类型: VARCHAR
+   属性: 非空
+
+3. paragraph_index
+   类型: INTEGER
+   属性: 非空
+
+4. content
+   类型: TEXT
+   属性: 非空
+
+5. character_count
+   类型: INTEGER
+   属性: 可空, 默认: 0
+
+6. para_metadata
+   类型: JSON
+   属性: 可空
+
+7. created_at
+   类型: TIMESTAMP
+   属性: 可空, 默认: now()
+
+主键: 
+
+================================================================================
+表结构展示完成
+================================================================================
+
+================================================================================
+ORM模型类信息
+================================================================================
+
+Document:
+  表名: documents
+  字段数: 16
+  字段列表：
+    - id (VARCHAR)
+    - user_id (VARCHAR)
+    - filename (VARCHAR)
+    - file_path (VARCHAR)
+    - file_type (VARCHAR)
+    - file_size (INTEGER)
+    - content_type (VARCHAR)
+    - total_paragraphs (INTEGER)
+    - chunk_size (INTEGER)
+    - chunk_overlap (INTEGER)
+    - splitter_type (VARCHAR)
+    - status (VARCHAR)
+    - error_message (TEXT)
+    - is_active (BOOLEAN)
+    - created_at (DATETIME)
+    - updated_at (DATETIME)
+  关系：
+    - paragraphs: Paragraph
+
+Paragraph:
+  表名: paragraphs
+  字段数: 7
+  字段列表：
+    - id (VARCHAR)
+    - document_id (VARCHAR)
+    - paragraph_index (INTEGER)
+    - content (TEXT)
+    - character_count (INTEGER)
+    - para_metadata (JSON)
+    - created_at (DATETIME)
+  关系：
+    - document: Document
+
+================================================================================
+Document和Paragraph表详细结构
+================================================================================
+
+Document表结构：
+--------------------------------------------------------------------------------
+  id                             VARCHAR              非空
+  user_id                        VARCHAR              非空
+  filename                       VARCHAR              非空
+  file_path                      VARCHAR              非空
+  file_type                      VARCHAR              非空
+  file_size                      INTEGER              非空
+  content_type                   VARCHAR              可空
+  total_paragraphs               INTEGER              可空, 默认: ScalarElementColumnDefault(0)
+  chunk_size                     INTEGER              可空
+  chunk_overlap                  INTEGER              可空
+  splitter_type                  VARCHAR              可空
+  status                         VARCHAR              可空, 默认: ScalarElementColumnDefault('processing')
+  error_message                  TEXT                 可空
+  is_active                      BOOLEAN              可空, 默认: ScalarElementColumnDefault(True)
+  created_at                     DATETIME             可空
+  updated_at                     DATETIME             可空
+
+Document表关系：
+  - paragraphs: Paragraph
+
+Paragraph表结构：
+--------------------------------------------------------------------------------
+  id                             VARCHAR              非空
+  document_id                    VARCHAR              非空
+  paragraph_index                INTEGER              非空
+  content                        TEXT                 非空
+  character_count                INTEGER              可空, 默认: ScalarElementColumnDefault(0)
+  para_metadata                  JSON                 可空, 默认: CallableColumnDefault(<function dict at 0x000001D86C9387C0>)
+  created_at                     DATETIME             可空
+
+Paragraph表关系：
+  - document: Document
+
+================================================================================
+第3天任务验证：文档数据模型设计
+================================================================================
+✅ Document表结构已实现
+✅ Paragraph表结构已实现
+✅ 表关系已正确配置
+================================================================================
