@@ -67,13 +67,21 @@ class DocumentService:
         user_id: str,
         skip: int = 0,
         limit: int = 100,
-        status: Optional[str] = None
+        status: Optional[str] = None,
+        file_type: Optional[str] = None,
+        search: Optional[str] = None
     ) -> List[Document]:
-        """获取文档列表"""
+        """获取文档列表（支持多种筛选）"""
         query = self.db.query(Document).filter(Document.user_id == user_id)
         
         if status:
             query = query.filter(Document.status == status)
+        
+        if file_type:
+            query = query.filter(Document.file_type == file_type)
+        
+        if search:
+            query = query.filter(Document.filename.contains(search))
         
         return query.order_by(desc(Document.created_at)).offset(skip).limit(limit).all()
 
@@ -149,11 +157,20 @@ class DocumentService:
         self.db.refresh(paragraph)
         return paragraph
 
-    def get_paragraphs(self, document_id: str) -> List[Paragraph]:
-        """获取文档的所有段落"""
-        return self.db.query(Paragraph).filter(
-            Paragraph.document_id == document_id
-        ).order_by(Paragraph.paragraph_index).all()
+    def get_paragraphs(
+        self,
+        document_id: str,
+        skip: int = 0,
+        limit: int = 100,
+        search: Optional[str] = None
+    ) -> List[Paragraph]:
+        """获取文档的所有段落（支持分页和搜索）"""
+        query = self.db.query(Paragraph).filter(Paragraph.document_id == document_id)
+        
+        if search:
+            query = query.filter(Paragraph.content.contains(search))
+        
+        return query.order_by(Paragraph.paragraph_index).offset(skip).limit(limit).all()
 
     def get_paragraph(self, paragraph_id: str) -> Optional[Paragraph]:
         """获取单个段落"""
@@ -193,7 +210,7 @@ class DocumentService:
     def process_document(
         self,
         document_id: str,
-        file_path: str
+        file_content: bytes
     ) -> Dict[str, Any]:
         """处理文档：解析、分段、存储"""
         try:
@@ -201,8 +218,8 @@ class DocumentService:
             if not document:
                 return {"success": False, "error": "文档不存在"}
 
-            # 解析文档
-            parse_result = document_parser_service.parse_document(file_path)
+            # 解析文档（从字节数据）
+            parse_result = document_parser_service.parse_document_from_bytes(file_content, document.file_type)
             
             if not parse_result.get("success"):
                 self.update_document_status(document_id, "failed", error_message=parse_result.get("error", "解析失败"))

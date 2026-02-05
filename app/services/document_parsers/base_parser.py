@@ -27,6 +27,19 @@ class BaseDocumentParser(ABC):
         pass
     
     @abstractmethod
+    def parse_from_bytes(self, file_content: bytes, file_type: str) -> Dict[str, Any]:
+        """从字节数据解析文档
+        
+        Args:
+            file_content: 文件字节数据
+            file_type: 文件类型
+            
+        Returns:
+            包含文档内容和元数据的字典
+        """
+        pass
+    
+    @abstractmethod
     def get_supported_extensions(self) -> List[str]:
         """获取支持的文件扩展名
         

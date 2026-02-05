@@ -9,6 +9,7 @@
 from typing import Dict, Any, List
 import base64
 import os
+import tempfile
 from .base_parser import BaseDocumentParser
 
 
@@ -311,3 +312,57 @@ class PDFParser(BaseDocumentParser):
     def get_supported_extensions(self) -> list:
         """获取支持的文件扩展名"""
         return ['.pdf']
+    
+    def parse_from_bytes(self, file_content: bytes, file_type: str) -> Dict[str, Any]:
+        """从字节数据解析PDF文档
+        
+        Args:
+            file_content: 文件字节数据
+            file_type: 文件类型
+            
+        Returns:
+            包含文档内容和元数据的字典
+        """
+        try:
+            import pypdf
+            
+            # 创建临时文件
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                temp_file.write(file_content)
+                temp_file_path = temp_file.name
+            
+            try:
+                reader = pypdf.PdfReader(temp_file_path)
+                
+                # 检测PDF是否为扫描版本
+                is_scanned = self._detect_scanned_pdf(reader)
+                
+                if is_scanned:
+                    print("检测到扫描版PDF，使用OCR提取文字")
+                    result = self._parse_with_ocr(temp_file_path, reader)
+                else:
+                    print("检测到普通PDF，使用pypdf提取文字")
+                    result = self._parse_with_pypdf(reader)
+                
+                return result
+            finally:
+                # 删除临时文件
+                if os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                
+        except ImportError:
+            return {
+                'content': '',
+                'metadata': {},
+                'images': [],
+                'success': False,
+                'error': 'pypdf库未安装，请运行: pip install pypdf'
+            }
+        except Exception as e:
+            return {
+                'content': '',
+                'metadata': {},
+                'images': [],
+                'success': False,
+                'error': f'解析PDF文档失败: {str(e)}'
+            }

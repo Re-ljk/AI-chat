@@ -8,6 +8,8 @@
 
 from typing import Dict, Any, List
 import base64
+import os
+import tempfile
 from .base_parser import BaseDocumentParser
 
 
@@ -120,3 +122,76 @@ class ExcelParser(BaseDocumentParser):
     def get_supported_extensions(self) -> list:
         """获取支持的文件扩展名"""
         return ['.xlsx', '.xls', '.csv']
+    
+    def parse_from_bytes(self, file_content: bytes, file_type: str) -> Dict[str, Any]:
+        """从字节数据解析Excel文档
+        
+        Args:
+            file_content: 文件字节数据
+            file_type: 文件类型
+            
+        Returns:
+            包含文档内容和元数据的字典
+        """
+        try:
+            import pandas as pd
+            from openpyxl import load_workbook
+            from io import BytesIO
+            
+            # 创建临时文件
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_type}') as temp_file:
+                temp_file.write(file_content)
+                temp_file_path = temp_file.name
+            
+            try:
+                df = pd.read_excel(temp_file_path)
+                content = []
+                images = []
+                
+                for column in df.columns:
+                    column_data = df[column].dropna().astype(str).tolist()
+                    content.append(f"{column}:\n" + "\n".join(column_data))
+                    content.append("\n")
+                
+                full_text = '\n'.join(content)
+                cleaned_text = self.clean_text(full_text)
+                
+                image_count = self._extract_images(temp_file_path, images)
+                
+                metadata = self.extract_metadata(cleaned_text)
+                metadata.update({
+                    'sheet_count': len(df.sheet_names),
+                    'column_count': len(df.columns),
+                    'row_count': len(df),
+                    'image_count': image_count,
+                    'has_images': image_count > 0,
+                    'file_type': 'excel'
+                })
+                
+                return {
+                    'content': cleaned_text,
+                    'metadata': metadata,
+                    'images': images,
+                    'success': True
+                }
+            finally:
+                # 删除临时文件
+                if os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                
+        except ImportError:
+            return {
+                'content': '',
+                'metadata': {},
+                'images': [],
+                'success': False,
+                'error': 'pandas或openpyxl库未安装，请运行: pip install pandas openpyxl'
+            }
+        except Exception as e:
+            return {
+                'content': '',
+                'metadata': {},
+                'images': [],
+                'success': False,
+                'error': f'解析Excel文档失败: {str(e)}'
+            }

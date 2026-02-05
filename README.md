@@ -41,6 +41,11 @@
 - ✅ 文档自动分段和存储
 - ✅ 段落查询和管理
 - ✅ 文档状态跟踪
+- ✅ MinIO对象存储集成
+- ✅ 文档存储到MinIO
+- ✅ 从MinIO下载原文
+- ✅ MinIO预签名URL生成
+- ✅ 完整的MinIO客户端操作
 
 ## 项目结构
 
@@ -78,13 +83,27 @@
 │   │   ├── conversation_service.py
 │   │   ├── langchain_service.py
 │   │   ├── document_service.py      # 文档服务
+│   │   ├── minio_service.py         # MinIO对象存储服务
 │   │   ├── document_parsers/         # 文档解析器
+│   │   │   ├── base_parser.py
+│   │   │   ├── pdf_parser.py
+│   │   │   ├── word_parser.py
+│   │   │   ├── excel_parser.py
+│   │   │   ├── text_splitter.py
 │   │   │   └── unstructured_parser.py
 │   │   └── document_parser_service.py
 │   └── __init__.py
 ├── test_2.4-2.5/            # 测试脚本
-│   ├── show_table_structure.py
-│   └── test_document_api.py
+│   ├── README.md                   # 测试说明文档
+│   ├── show_table_structure.py     # 数据库表结构展示脚本
+│   ├── test_document_api.py        # 文档API测试脚本
+│   ├── table_structure_log.txt     # 表结构日志文件（自动生成）
+│   └── document_api_test_log.txt   # API测试日志文件（自动生成）
+├── test_2.5-2.6/            # MinIO和文档API测试脚本
+│   ├── README.md                   # 测试说明文档
+│   ├── test_minio_and_document_apis.py  # MinIO和文档API综合测试
+│   ├── test_file.txt               # 测试文件
+│   └── test_log.txt                # 测试日志文件（自动生成）
 ├── uploads/                  # 上传文件存储目录
 ├── nltk_data/               # NLTK数据目录
 ├── main.py                   # 主应用入口
@@ -163,10 +182,15 @@
 - 文档详情查询
 - 文档更新（状态、标题等）
 - 文档删除
-- 段落管理（查询、统计）
+- 段落管理（查询、统计、搜索）
 - 文档状态跟踪（processing/completed/failed/archived）
 - 自动文档解析和分段
 - 错误处理和日志记录
+- **MinIO对象存储集成**
+  - 文档自动上传到MinIO
+  - 从MinIO下载原文
+  - MinIO预签名URL生成
+  - 完整的MinIO客户端操作
 - 文件存储管理
 
 ## 前端功能

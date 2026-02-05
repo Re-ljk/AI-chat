@@ -49,6 +49,18 @@ class Settings(BaseSettings):
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com/v1"
     DEEPSEEK_MODEL: str = "deepseek-chat"
 
+    # MinIO 配置
+    MINIO_ENDPOINT: str = Field("localhost", env="MINIO_ENDPOINT")
+    MINIO_API_PORT: int = Field(9000, env="MINIO_API_PORT")
+    MINIO_ACCESS_KEY: str = Field("minioadmin", env="MINIO_ACCESS_KEY")
+    MINIO_SECRET_KEY: str = Field("password", env="MINIO_SECRET_KEY")
+    MINIO_BUCKET_NAME: str = Field("documents", env="MINIO_BUCKET_NAME")
+    MINIO_SECURE: bool = Field(False, env="MINIO_SECURE")
+
+    @property
+    def MINIO_ENDPOINT_URL(self) -> str:
+        return f"{self.MINIO_ENDPOINT}:{self.MINIO_API_PORT}"
+
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
 

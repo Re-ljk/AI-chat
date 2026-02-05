@@ -97,6 +97,71 @@ class DocumentParserService:
             'chunks': []
         }
     
+    def parse_document_from_bytes(self, file_content: bytes, file_type: str) -> Dict[str, Any]:
+        """从字节数据解析文档
+        
+        Args:
+            file_content: 文件字节数据
+            file_type: 文件类型
+            
+        Returns:
+            包含解析结果、分段结果的字典
+        """
+        parser = self.get_parser_by_type(file_type)
+        
+        if not parser:
+            return {
+                'success': False,
+                'error': f'不支持的文件类型: {file_type}',
+                'content': '',
+                'metadata': {},
+                'chunks': []
+            }
+        
+        parse_result = parser.parse_from_bytes(file_content, file_type)
+        
+        if not parse_result.get('success', False):
+            return {
+                'success': False,
+                'error': parse_result.get('error', '解析失败'),
+                'content': '',
+                'metadata': {},
+                'chunks': []
+            }
+        
+        return {
+            'success': True,
+            'error': None,
+            'content': parse_result.get('content', ''),
+            'metadata': parse_result.get('metadata', {}),
+            'chunks': []
+        }
+    
+    def get_parser_by_type(self, file_type: str) -> Optional[BaseDocumentParser]:
+        """根据文件类型获取对应的解析器
+        
+        Args:
+            file_type: 文件类型（如 'pdf', 'docx'）
+            
+        Returns:
+            文档解析器实例，如果不支持则返回None
+        """
+        type_parser_map = {
+            'pdf': 'pdf',
+            'doc': 'word',
+            'docx': 'word',
+            'xls': 'excel',
+            'xlsx': 'excel',
+            'txt': 'unstructured',
+            'md': 'unstructured'
+        }
+        
+        parser_name = type_parser_map.get(file_type.lower())
+        if parser_name:
+            return self.parsers.get(parser_name)
+        
+        return None
+    
     def split_document(
         self,
         content: str,
