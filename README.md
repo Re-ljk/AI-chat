@@ -93,17 +93,6 @@
 │   │   │   └── unstructured_parser.py
 │   │   └── document_parser_service.py
 │   └── __init__.py
-├── test_2.4-2.5/            # 测试脚本
-│   ├── README.md                   # 测试说明文档
-│   ├── show_table_structure.py     # 数据库表结构展示脚本
-│   ├── test_document_api.py        # 文档API测试脚本
-│   ├── table_structure_log.txt     # 表结构日志文件（自动生成）
-│   └── document_api_test_log.txt   # API测试日志文件（自动生成）
-├── test_2.5-2.6/            # MinIO和文档API测试脚本
-│   ├── README.md                   # 测试说明文档
-│   ├── test_minio_and_document_apis.py  # MinIO和文档API综合测试
-│   ├── test_file.txt               # 测试文件
-│   └── test_log.txt                # 测试日志文件（自动生成）
 ├── uploads/                  # 上传文件存储目录
 ├── nltk_data/               # NLTK数据目录
 ├── main.py                   # 主应用入口

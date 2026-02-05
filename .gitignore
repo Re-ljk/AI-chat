@@ -51,8 +51,6 @@ test/test_*.py
 create_test_documents.py
 2026-*.md
 
-# Allow test files in zzz 2月4和5日测试 folder
-!zzz 2月4和5日测试/
 
 # Requirements documentation
 需求完成情况.md
@@ -63,3 +61,8 @@ frontend/.vite/
 frontend/dist/
 frontend/package-lock.json
 
+# .env
+.env.bak
+test_2.4-2.5/
+test_2.5-2.6/
+README.bak
