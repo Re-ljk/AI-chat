@@ -1,6 +1,6 @@
 """
     @project: aihub
-    @Author: dongrunhua
+    @Author: jiangkuanli
     @file: document
     @date: 2026/2/4
     @desc: Document and Paragraph models for document management
