@@ -1,3 +1,11 @@
+# AI-chat
+
+基于 FastAPI + React + TypeScript 的 AI 对话与文档管理系统，支持 JWT 认证、多轮会话、流式回复、LangChain、DeepSeek、PDF/Word/Excel 解析与 MinIO 对象存储。
+
+![Visitor Count](https://visitor-badge.laobi.icu/badge?page_id=Re-ljk.AI-chat)
+![GitHub stars](https://img.shields.io/github/stars/Re-ljk/AI-chat)
+![GitHub forks](https://img.shields.io/github/forks/Re-ljk/AI-chat)
+![GitHub license](https://img.shields.io/github/license/Re-ljk/AI-chat)
 
 ## 项目展示
 
